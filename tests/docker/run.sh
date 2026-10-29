@@ -13,12 +13,15 @@ docker info >/dev/null 2>&1 || {
 }
 
 mode="${MODE:-checkout}"
+# Permite emular otra arquitectura: PLATFORM=linux/amd64 ./tests/docker/run.sh
+platform_args=()
+[ -n "${PLATFORM:-}" ] && platform_args=(--platform "$PLATFORM")
 
-docker build -q -t pi-bootstrap-test "$here"
+docker build -q ${platform_args[@]+"${platform_args[@]}"} -t pi-bootstrap-test "$here"
 case "$mode" in
-  checkout)  docker run --rm -v "$repo:/src:ro" -e PROFILE="$profile" \
+  checkout)  docker run --rm ${platform_args[@]+"${platform_args[@]}"} -v "$repo:/src:ro" -e PROFILE="$profile" \
                pi-bootstrap-test /src/tests/docker/scenario.sh ;;
-  published) docker run --rm -v "$repo:/src:ro" -e PROFILE="$profile" \
+  published) docker run --rm ${platform_args[@]+"${platform_args[@]}"} -v "$repo:/src:ro" -e PROFILE="$profile" \
                -e PI_BOOTSTRAP_VERSION="${PI_BOOTSTRAP_VERSION:-0.1.0}" \
                pi-bootstrap-test /src/tests/docker/published.sh ;;
   *) echo "MODE debe ser checkout o published" >&2; exit 2 ;;

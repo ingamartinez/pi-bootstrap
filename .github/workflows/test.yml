@@ -19,6 +19,8 @@ jobs:
         run: node scripts/gen-pins.mjs --check
       - name: config/profiles refleja scripts/profiles.mjs
         run: node scripts/gen-profiles.mjs --check
+      - name: todas las URLs pineadas existen (4 plataformas)
+        run: node scripts/check-urls.mjs
       - name: el tag y la versión que descarga bootstrap.sh coinciden
         if: github.ref_type == 'tag'
         run: |

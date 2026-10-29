@@ -12,8 +12,13 @@ tool_version() {
 }
 
 url_for() {
-  # url_for <template> <version>
-  printf '%s' "$1" | sed "s/{version}/$2/g; s/{os}/$OS/g; s/{arch}/$ARCH/g"
+  # url_for <template> <version> — {arch} usa TOOL_ARCH si el paso lo definió
+  printf '%s' "$1" | sed "s/{version}/$2/g; s/{os}/$OS/g; s/{arch}/${TOOL_ARCH:-$ARCH}/g"
+}
+
+tool_arch() {
+  # tool_arch <id> — el nombre de arquitectura que usa ESE proyecto (Go: amd64, node: x64)
+  node -e "const t=require('$SRC/manifest.json').tools['$1']; const m=t.archMap||{}; process.stdout.write(m['$ARCH']||'$ARCH')"
 }
 
 # ---------------------------------------------------------------- preflight
@@ -113,12 +118,13 @@ install_tarball_tool() {
     log "  $art $cur < $ver: se reemplaza por el pin"
   fi
 
+  TOOL_ARCH=$(tool_arch "$id") || die "no se pudo resolver arquitectura de $id"
   url=$(url_for "$tpl" "$ver")
-  local tarball="$CACHE_DIR/$id-$ver-$OS-$ARCH.tar.gz"
+  local tarball="$CACHE_DIR/$id-$ver-$OS-$TOOL_ARCH.tar.gz"
   if [ ! -f "$tarball" ] || [ "$(sha256_of "$tarball")" != "$sha" ]; then
     log "  descargando $url"
     fetch "$url" "$tarball"
-    [ "$(sha256_of "$tarball")" = "$sha" ] || die "sha256 no coincide para $id-$ver-$OS-$ARCH"
+    [ "$(sha256_of "$tarball")" = "$sha" ] || die "sha256 no coincide para $id-$ver-$OS-$TOOL_ARCH"
   else
     log "  cache válida: $tarball"
   fi

@@ -72,7 +72,11 @@
       "dest": "~/.local/bin",
       "verify": [
         "gentle-ai --version"
-      ]
+      ],
+      "archMap": {
+        "x64": "amd64",
+        "arm64": "arm64"
+      }
     },
     "engram": {
       "kind": "tarball",
@@ -89,7 +93,11 @@
       "dest": "~/.local/bin",
       "verify": [
         "engram --version"
-      ]
+      ],
+      "archMap": {
+        "x64": "amd64",
+        "arm64": "arm64"
+      }
     },
     "codegraph": {
       "kind": "npm-global",
