@@ -87,6 +87,14 @@ nunca se delegan a los defaults de gentle-ai. Efecto real con `--agent pi` (medi
 Las skills que ve un dev de Pi son las **13 del paquete `gentle-pi`** (pinneado en 4.5.1), no el
 componente `skills`. Es determinista por el pin.
 
+**`gga` queda fuera por defecto**: es un gate de revisión en pre-commit que bloquea commits y
+necesita un CLI de proveedor mapeado. Se activa añadiéndolo a `--component`.
+
+Asimetría de gentle-ai, verificada: `--component` manda en el plan pero **no desinstala**. En una
+máquina donde gga ya estaba, el plan resuelve 7 componentes y sin embargo `state.json` y las carpetas
+`~/.config/gga` y `~/.local/share/gga` siguen ahí; hay que retirarlas a mano. En una instalación
+limpia no aparecen.
+
 ### Perfiles
 
 | Perfil | Proveedores | Independencia |
@@ -107,6 +115,44 @@ gates críticos, y `verify` lo advierte.
 pi-bootstrap [install] [--tiers base,tools] [--profile <id>] [--yes] [--dry-run] [--skip-auth]
 pi-bootstrap profiles | profile <id> | auth | verify | doctor | init [dir] | upgrade
 ```
+
+## Actualizar
+
+```bash
+pi-bootstrap upgrade                     # plan: qué hay nuevo (no toca nada)
+pi-bootstrap upgrade --apply --yes       # backup → manifest+sha256 → instalar → verificar
+pi-bootstrap upgrade --rollback          # vuelve a la copia previa al último upgrade
+pi-bootstrap upgrade --rollback --to <ts>
+```
+
+De dónde salen las versiones: registro de npm (`pi`, `codegraph`, `claude-code`, paquetes de pi),
+`nodejs.org/dist/index.json` + `SHASUMS256.txt` para Node (sólo LTS), y la API de releases de GitHub
+para `gentle-ai`/`engram` (digest del asset o fichero de checksums).
+
+**Guard de major**: por defecto sólo propone cambios dentro del mismo major — saltar de Node 24 a 26
+o de gentle-ai 4 a 5 sin querer es un riesgo. `--major` lo permite explícitamente.
+
+Antes de aplicar, todo se respalda en `~/.pi-bootstrap/rollback/<ts>/` (manifest + configuración +
+`installed.json`). El rollback restaura ese manifest **en el working tree del repo** y reinstala, así
+que después conviene `git diff manifest.json` para decidir si se commitea.
+
+El estado instalado (pin vs versión real, perfil y selección de gentle-ai) queda en
+`~/.pi-bootstrap/installed.json`, que es lo que `upgrade` usa para saber de dónde partir.
+
+## Borrar
+
+```bash
+pi-bootstrap reset --config --dry-run    # ver qué borraría
+pi-bootstrap reset --config --yes        # configuración (con backup previo)
+pi-bootstrap reset --tools --yes         # binarios en ~/.local + paquetes de pi
+pi-bootstrap reset --all --yes           # config + tools (+ --shell)
+```
+
+- `--config` respalda antes en `~/.pi/backups/pi-bootstrap-reset-<ts>/`. Nada se borra sin `--yes`.
+- `--tools` quita lo que instaló el bootstrap (no toca binarios del sistema).
+- `--purge-auth` es el único que toca credenciales (`auth.json`, `trust.json`, `browser-harness.json`)
+  y es irreversible: no se respaldan.
+- Después de `reset --config`, se recupera con `pi-bootstrap install --profile <perfil> --yes`.
 
 ## Pruebas
 

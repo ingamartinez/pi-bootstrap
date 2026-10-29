@@ -7,12 +7,15 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$SRC/lib/pins.sh"
 . "$SRC/lib/steps.sh"
 . "$SRC/lib/verify.sh"
+. "$SRC/lib/reset.sh"
 
 TIERS="${PI_BOOTSTRAP_TIERS:-base,tools}"
 PROFILE="${PI_BOOTSTRAP_PROFILE:-}"
 PROFILE_REQUIRES=""
 ASSUME_YES=0 DRY_RUN=0 SKIP_AUTH=0 FORCE=0 STRICT=0
+RESET_CONFIG=0 RESET_TOOLS=0 RESET_SHELL=0 RESET_ALL=0 PURGE_AUTH=0
 CMD=""
+FORWARD=()
 
 usage() {
   cat <<'EOF'
@@ -26,7 +29,11 @@ Uso:
   pi-bootstrap verify                   verifica que todo quedó bien
   pi-bootstrap doctor                   diagnóstico sin modificar nada
   pi-bootstrap init [dir]               prepara un repo (AGENTS.md, trust, codegraph)
-  pi-bootstrap upgrade                  plan de actualización (pineado → nuevo)
+  pi-bootstrap upgrade                  plan de actualización (no toca nada)
+  pi-bootstrap upgrade --apply --yes    actualiza pins, reinstala y verifica
+  pi-bootstrap upgrade --rollback       vuelve a la copia previa al último upgrade
+  pi-bootstrap reset --config           borra la configuración que gestiona el bootstrap
+  pi-bootstrap reset --all --yes        borra configuración + herramientas (+ --shell)
   pi-bootstrap export-config            re-snapshotea config/ desde esta máquina
 
 Opciones:
@@ -38,12 +45,22 @@ Opciones:
   --force            re-aplica pasos ya hechos (gentle-ai install, agentes)
   --prefix <dir>     prefijo de instalación (default: ~/.local)
   --strict           verify falla también ante avisos
+
+reset:
+  --config | --tools | --shell | --all   qué borrar (siempre con backup de config)
+  --purge-auth                            incluye auth.json/trust.json (irreversible)
 EOF
 }
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    install|profiles|profile|auth|verify|doctor|init|upgrade|export-config) CMD="$1"; shift ;;
+    upgrade|update) CMD="$1"; shift; FORWARD=("$@"); break ;;
+    install|profiles|profile|auth|verify|doctor|init|export-config|reset) CMD="$1"; shift ;;
+    --config) RESET_CONFIG=1; shift ;;
+    --tools) RESET_TOOLS=1; shift ;;
+    --shell) RESET_SHELL=1; shift ;;
+    --all) RESET_ALL=1; shift ;;
+    --purge-auth) PURGE_AUTH=1; shift ;;
     --tiers) TIERS="$2"; shift 2 ;;
     --tiers=*) TIERS="${1#*=}"; shift ;;
     --profile) PROFILE="$2"; shift 2 ;;
@@ -60,6 +77,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 export ASSUME_YES DRY_RUN SKIP_AUTH FORCE STRICT PREFIX
+export RESET_CONFIG RESET_TOOLS RESET_SHELL RESET_ALL PURGE_AUTH
 
 list_profiles() {
   local f
@@ -137,6 +155,7 @@ cmd_install() {
   auth_gate
   ensure_path
   verify_all
+  node "$SRC/scripts/record-state.mjs" "$TIERS" "$PROFILE" || warn "no se pudo registrar el estado instalado"
 }
 
 case "$CMD" in
@@ -167,13 +186,12 @@ case "$CMD" in
     detect_platform
     init_project "${1:-$PWD}"
     ;;
-  upgrade)
-    step "upgrade (pineado)"
-    log "  1. editar manifest.json (versiones + sha256 nuevos)"
-    log "  2. node scripts/gen-pins.mjs"
-    log "  3. pi-bootstrap install --force"
-    log "  4. pi-bootstrap verify --strict"
-    warn "no implementado todavía: este comando sólo imprime el procedimiento"
+  upgrade|update)
+    exec node "$SRC/scripts/upgrade.mjs" ${FORWARD[@]+"${FORWARD[@]}"}
+    ;;
+  reset)
+    detect_platform
+    cmd_reset
     ;;
   export-config)
     node "$SRC/scripts/export-config.mjs" ;;

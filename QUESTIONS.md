@@ -31,13 +31,18 @@
     (`claude-theme,context7,persona,engram,gga,opencode-gentle-logo,permissions,skills`), persona
     `gentleman`, `--pi-background-subagents=on`, canal `stable`. Nada se deja al default.
 23. Skills: el componente `skills` no aplica a Pi; las skills de Pi vienen del pin de `gentle-pi`.
-24. `gga` entra como parte del full; se documenta que requiere `gga init` + `gga install` por repo.
+24. `gga` **queda fuera** del set por defecto (gate de pre-commit que bloquea commits y necesita un
+    CLI de proveedor mapeado); es opt-in con `--component gga`. gentle-ai no desinstala componentes
+    quitados de la lista: sólo deja de instalarlos en máquinas limpias.
 
 ## Pendientes
 
 - ~~Tier `shell`~~ → **resuelto**: el binario vive en `gentle-pi` y `gentle-shell setup` aprovisiona
   el home sin navegador (verificado en macOS aislado y en Docker, idempotente).
-- **`upgrade` real**: diff de versiones → apply → verify → rollback desde `~/.pi/backups`.
+- ~~`upgrade` real~~ → **implementado**: plan (npm/nodejs/GitHub), `--apply` con backup y verificación,
+  `--rollback`, y guard de major (`--major` para permitirlo).
+- ~~Borrar configuración~~ → **`pi-bootstrap reset --config|--tools|--shell|--all`** con backup previo
+  y `--purge-auth` separado.
 - **`curl | sh`**: publicar el repo y el tag; hoy `bootstrap.sh` falla con instrucciones claras.
 - **Login en TTY real**: probar `auth` con openai y claude de verdad (en Docker no se puede).
 - **macOS**: correr el mismo `tests/` en un HOME aislado o usuario nuevo (el pipeline no se ha

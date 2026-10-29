@@ -45,6 +45,14 @@ assert_eq "subagents.model_profiles" "$(json "$PI_DIR/subagents.json" 'Object.ke
 assert_eq "profiles.active" "$(json "$GENTLE_DIR/profiles.json" 'v.active')" "$PROFILE"
 assert_eq "profiles[$PROFILE] roles" "$(json "$GENTLE_DIR/profiles.json" "Object.keys(v.profiles['$PROFILE']).length")" "13"
 
+# --- gga fuera del set (gate de pre-commit, opt-in) ---
+GA_COMPONENTS=$(node -e "const s=require(process.env.HOME+'/.gentle-ai/state.json'); process.stdout.write((s.components||[]).join(','))" 2>/dev/null || echo "__ERR__")
+case "$GA_COMPONENTS" in
+  *gga*) fail "gga sigue en los componentes: $GA_COMPONENTS" ;;
+  __ERR__) fail "no se pudo leer ~/.gentle-ai/state.json" ;;
+  *) pass "gga fuera del set: $GA_COMPONENTS" ;;
+esac
+
 # --- coherencia cruzada: cada rol de subagents debe coincidir con el perfil ---
 MISMATCH=$(node -e '
 const s=require("'"$PI_DIR"'/subagents.json").model_profiles;

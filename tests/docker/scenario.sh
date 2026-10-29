@@ -58,6 +58,17 @@ else
   pass "checkout montado read-only (no se pudo escribir)"
 fi
 
+say "reset --config y recuperación"
+"$SRC/bin/pi-bootstrap" reset --config --yes > /tmp/reset.log 2>&1
+RC_R=$?
+assert_eq "reset exit code" "$RC_R" "0"
+if [ -f "$HOME/.pi/agent/settings.json" ]; then fail "reset no borró settings.json"; else pass "settings.json eliminado"; fi
+if ls "$HOME/.pi/backups"/pi-bootstrap-reset-* >/dev/null 2>&1; then pass "backup del reset presente"; else fail "reset no dejó backup"; fi
+"$SRC/bootstrap.sh" --tiers "${TIERS:-base,tools,shell}" --profile "$PROFILE" --yes --skip-auth > /tmp/recover.log 2>&1
+assert_eq "recuperación exit code" "$?" "0"
+if [ -f "$HOME/.pi/agent/settings.json" ]; then pass "configuración recuperada"; else fail "la reinstalación no recuperó settings.json"; fi
+bash "$SRC/tests/docker/assert.sh" "$PROFILE" || FAILS=$((FAILS + 1))
+
 say "resultado"
 if [ "$FAILS" -gt 0 ]; then
   printf '\033[31m%d fallo(s)\033[0m\n' "$FAILS"

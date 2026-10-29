@@ -2,6 +2,9 @@
 # Utilidades comunes. Compatible con bash 3.2 (macOS): sin arrays asociativos ni mapfile.
 
 PREFIX="${PI_BOOTSTRAP_PREFIX:-$HOME/.local}"
+# EXACT=1 (lo usa `upgrade --rollback`) obliga a dejar la versión EXACTA del pin,
+# incluso si la instalada es más nueva: sin esto un rollback restaura los pins pero no baja binarios.
+EXACT="${PI_BOOTSTRAP_EXACT:-0}"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/pi-bootstrap"
 STATE_DIR="$HOME/.pi-bootstrap"
 BACKUP_ROOT="$HOME/.pi/backups"

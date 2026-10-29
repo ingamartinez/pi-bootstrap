@@ -45,11 +45,15 @@ install_node() {
   local want="$NODE_VERSION"
   if have node; then
     local cur; cur=$(tool_version node)
-    if ver_ge "${cur:-0.0.0}" "$want"; then
+    if [ "${cur:-0.0.0}" = "$want" ]; then
       ok "node $cur (pin $want) ya instalado"
       return 0
     fi
-    log "  node $cur < $want: se instala el pin en $PREFIX/node"
+    if ver_ge "${cur:-0.0.0}" "$want" && [ "$EXACT" != "1" ]; then
+      ok "node $cur ≥ pin $want: se reutiliza"
+      return 0
+    fi
+    log "  node $cur ≠ $want: se instala el pin en $PREFIX/node"
   fi
 
   local sha_var="NODE_SHA_${OS}_${ARCH}"
@@ -84,11 +88,15 @@ install_npm_tool() {
 
   if have "$cmd"; then
     cur=$(tool_version "$cmd")
-    if ver_ge "${cur:-0.0.0}" "$ver"; then
+    if [ "${cur:-0.0.0}" = "$ver" ]; then
       ok "$cmd $cur (pin $ver) ya instalado"
       return 0
     fi
-    log "  $cmd $cur < $ver: se actualiza vía npm"
+    if ver_ge "${cur:-0.0.0}" "$ver" && [ "$EXACT" != "1" ]; then
+      ok "$cmd $cur ≥ pin $ver: se reutiliza"
+      return 0
+    fi
+    log "  $cmd $cur ≠ $ver: se instala el pin vía npm"
   fi
 
   have npm || die "npm no disponible (node debería estar instalado antes)"
@@ -111,11 +119,15 @@ install_tarball_tool() {
 
   if [ -x "$bin" ]; then
     cur=$(tool_version "$art")
-    if ver_ge "${cur:-0.0.0}" "$ver"; then
+    if [ "${cur:-0.0.0}" = "$ver" ]; then
       ok "$art $cur (pin $ver) ya instalado"
       return 0
     fi
-    log "  $art $cur < $ver: se reemplaza por el pin"
+    if ver_ge "${cur:-0.0.0}" "$ver" && [ "$EXACT" != "1" ]; then
+      ok "$art $cur ≥ pin $ver: se reutiliza"
+      return 0
+    fi
+    log "  $art $cur ≠ $ver: se instala el pin"
   fi
 
   TOOL_ARCH=$(tool_arch "$id") || die "no se pudo resolver arquitectura de $id"

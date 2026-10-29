@@ -225,13 +225,12 @@
       "context7",
       "persona",
       "engram",
-      "gga",
       "opencode-gentle-logo",
       "permissions",
       "skills"
     ],
     "piBackgroundSubagents": "on",
     "channel": "stable",
-    "note": "Componentes del preset full-gentleman, declarados explícitamente. Con --agent pi, el componente skills no escribe en disco: las skills de Pi vienen del paquete gentle-pi (pinneado). gga pide `gga init` + `gga install` por repo."
+    "note": "Componentes del preset full-gentleman, declarados explícitamente, menos gga. gga (Gentleman Guardian Angel) es un gate de revisión en pre-commit: queda fuera por defecto porque bloquea commits y necesita un CLI de proveedor mapeado; opt-in con --component gga. Con --agent pi el componente skills no escribe en disco: las skills de Pi vienen del paquete gentle-pi."
   }
 }
