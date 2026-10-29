@@ -71,6 +71,19 @@ fi
 NPKG=$(pi list 2>/dev/null | grep -cE '^  (npm|git):')
 if [ "${NPKG:-0}" -ge 7 ]; then pass "paquetes de pi instalados: $NPKG"; else fail "paquetes de pi: $NPKG (esperados ≥7)"; fi
 
+# --- tier shell (gentle-shell vive en el paquete gentle-pi, sin wizard) ---
+if command -v gentle-shell >/dev/null 2>&1; then
+  assert_eq "gentle-shell" "$(gentle-shell --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" "4.5.1"
+  [ -f "$HOME/.gentle-shell/agent/settings.json" ] \
+    && pass "gentle-shell: home aislado provisionado" \
+    || fail "gentle-shell: falta ~/.gentle-shell/agent/settings.json"
+  [ -f "$HOME/.gentle-shell/gentle-ai/persona.json" ] \
+    && pass "gentle-shell: persona.json" \
+    || fail "gentle-shell: falta persona.json"
+else
+  fail "gentle-shell no está en PATH (tier shell)"
+fi
+
 # --- fuente git pineada (el formato de pin es @<ref>) ---
 if pi list 2>/dev/null | grep -q "pi-community-themes"; then
   pass "paquete git pineado instalado (pi-community-themes)"

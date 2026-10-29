@@ -129,17 +129,24 @@
       "tier": "auth:claude"
     },
     "gentle-shell": {
-      "kind": "official-wizard",
+      "kind": "pi-package-bin",
+      "package": "gentle-pi",
       "version": "4.5.1",
       "requires": [
         "node",
-        "pi"
+        "pi",
+        "gentle-ai"
       ],
-      "reason": "El instalador oficial es un wizard de navegador (loopback + consent:true). No hay CLI headless.",
+      "bin": "bin/gentle-shell.mjs",
+      "shim": "~/.local/bin/gentle-shell",
+      "home": "~/.gentle-shell",
+      "note": "gentle-ai NO instala gentle-shell: es el shell que vive en el paquete gentle-pi. Su instalador oficial es un wizard de navegador; el `setup` del propio paquete hace lo mismo sin navegador (verificado).",
       "verify": [
         "gentle-shell --version"
       ],
-      "tier": "shell"
+      "exposes": [
+        "gentle-shell"
+      ]
     }
   },
   "pi": {

@@ -15,7 +15,7 @@ assert_cmd() { if "$@" >/dev/null 2>&1; then pass "$*"; else fail "$*"; fi; }
 export PATH="$HOME/.local/bin:$PATH"
 
 say "corrida 1 — instalación desde cero"
-"$SRC/bootstrap.sh" --tiers base,tools --profile "$PROFILE" --yes --skip-auth
+"$SRC/bootstrap.sh" --tiers "${TIERS:-base,tools,shell}" --profile "$PROFILE" --yes --skip-auth
 RC=$?
 assert_eq "bootstrap exit code" "$RC" "0"
 [ "$RC" -eq 0 ] || { fail "abortando: la instalación no terminó"; exit 1; }
@@ -31,7 +31,7 @@ bash "$SRC/tests/docker/assert.sh" "$PROFILE" || FAILS=$((FAILS + 1))
 say "corrida 2 — idempotencia"
 HASH_BEFORE=$(cat "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/subagents.json" \
   "$HOME/.pi/agent/mcp.json" "$HOME/.pi/gentle-ai/profiles.json" 2>/dev/null | sha256sum | awk '{print $1}')
-"$SRC/bootstrap.sh" --tiers base,tools --profile "$PROFILE" --yes --skip-auth >/tmp/run2.log 2>&1
+"$SRC/bootstrap.sh" --tiers "${TIERS:-base,tools,shell}" --profile "$PROFILE" --yes --skip-auth >/tmp/run2.log 2>&1
 RC2=$?
 assert_eq "segunda corrida exit code" "$RC2" "0"
 HASH_AFTER=$(cat "$HOME/.pi/agent/settings.json" "$HOME/.pi/agent/subagents.json" \

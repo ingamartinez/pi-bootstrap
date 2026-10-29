@@ -24,10 +24,14 @@
 17. Merge policy: **backup + merge conservador**, nunca clobber silencioso.
 18. Telemetría: pendiente de decidir en la implementación (hoy no se toca).
 19. Alcance: **sólo el harness**; `init` se limita a `AGENTS.md`, `trust.json`, `codegraph init`, `odd/tasks/`.
+20. Tier `shell` **entra** sin wizard: shim al binario de `gentle-pi` + `home isolated` + `import-pi`
+    + `setup`. Se pierde el runtime Node propio (usamos el pin) y el `upgrade --channel`.
+21. Node: si el dev ya tiene `node` ≥ pin, se reutiliza. No se fuerza el runtime pineado.
 
 ## Pendientes
 
-- **Tier `shell`**: replicar el wizard de gentle-shell sin navegador (o aceptar un paso manual).
+- ~~Tier `shell`~~ → **resuelto**: el binario vive en `gentle-pi` y `gentle-shell setup` aprovisiona
+  el home sin navegador (verificado en macOS aislado y en Docker, idempotente).
 - **`upgrade` real**: diff de versiones → apply → verify → rollback desde `~/.pi/backups`.
 - **`curl | sh`**: publicar el repo y el tag; hoy `bootstrap.sh` falla con instrucciones claras.
 - **Login en TTY real**: probar `auth` con openai y claude de verdad (en Docker no se puede).

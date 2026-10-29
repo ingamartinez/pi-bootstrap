@@ -220,6 +220,45 @@ apply_profile() {
   node "$SRC/scripts/apply-profile.mjs" "$PROFILE"
 }
 
+install_gentle_shell() {
+  # Tier shell: gentle-shell NO viene de gentle-ai, vive en el paquete gentle-pi.
+  # Su instalador oficial es un wizard de navegador; `gentle-shell setup` hace lo mismo sin navegador.
+  case ",$TIERS," in *",shell,"*) ;; *) return 0 ;; esac
+
+  step "gentle-shell (home aislado)"
+  local pi_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+  local ver pkg_dir shim
+  ver=$(node -e "const m=require('$SRC/manifest.json'); process.stdout.write(m.tools['gentle-shell'].version)")
+  pkg_dir="$pi_dir/npm/node_modules/gentle-pi"
+
+  if [ ! -f "$pkg_dir/bin/gentle-shell.mjs" ]; then
+    log "  instalando npm:gentle-pi@$ver (provee el binario)"
+    pi install "npm:gentle-pi@$ver" >/dev/null 2>&1 || die "no se pudo instalar gentle-pi@$ver"
+  fi
+
+  shim="$PREFIX/bin/gentle-shell"
+  printf '#!/bin/sh\n# generado por pi-bootstrap: gentle-shell vive en el paquete gentle-pi\nexec node "%s/bin/gentle-shell.mjs" "$@"\n' \
+    "$pkg_dir" > "$shim"
+  chmod +x "$shim"
+  ok "gentle-shell → $shim (paquete gentle-pi)"
+
+  gentle-shell home isolated >/dev/null 2>&1 || true
+  # Reutiliza el login de pi: home import-pi nunca sobreescribe
+  if [ -f "$HOME/.pi/agent/auth.json" ] && [ ! -f "$HOME/.gentle-shell/agent/auth.json" ]; then
+    gentle-shell home import-pi >/dev/null 2>&1 && log "  credenciales y MCP importados de pi"
+  fi
+
+  if [ -f "$HOME/.gentle-shell/agent/settings.json" ] && [ "${FORCE:-0}" != "1" ]; then
+    ok "gentle-shell ya provisionado (usa --force para re-provisionar)"
+    return 0
+  fi
+
+  log "  gentle-shell setup (provisiona el home; sin navegador)"
+  GENTLE_AI_ENGRAM_BIN="$PREFIX/bin/engram" gentle-shell setup >/dev/null 2>&1 \
+    || warn "gentle-shell setup devolvió error; corre 'gentle-shell setup' a mano"
+  ok "gentle-shell $(tool_version gentle-shell)"
+}
+
 # ---------------------------------------------------------------- auth
 
 auth_ready() {

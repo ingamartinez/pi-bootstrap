@@ -130,6 +130,10 @@ cmd_install() {
   install_pi_packages
   apply_config
   apply_profile
+  install_gentle_shell
+  # `gentle-shell setup` corre gentle-ai install, que puede regenerar profiles.json:
+  # se re-aplica el perfil para que el runtime del home principal quede como debe.
+  apply_profile
   auth_gate
   ensure_path
   verify_all

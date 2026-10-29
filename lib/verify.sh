@@ -41,6 +41,7 @@ verify_all() {
   local ids="node pi gentle-ai"
   case ",$TIERS," in *",tools,"*) ids="$ids engram codegraph" ;; esac
   case " $PROFILE_REQUIRES " in *" claude "*) ids="$ids claude-code" ;; esac
+  case ",$TIERS," in *",shell,"*) ids="$ids gentle-shell" ;; esac
   for id in $ids; do check_tool "$id"; done
 
   log ""
@@ -69,6 +70,21 @@ verify_all() {
   else
     vfail "config en drift con el repo (corre: pi-bootstrap install)"
   fi
+
+  case ",$TIERS," in
+    *",shell,"*)
+      if [ -f "$HOME/.gentle-shell/agent/settings.json" ]; then
+        vpass "gentle-shell: home aislado provisionado"
+      else
+        vfail "gentle-shell: falta ~/.gentle-shell/agent/settings.json (corre: gentle-shell setup)"
+      fi
+      if [ -f "$HOME/.gentle-shell/gentle-ai/persona.json" ]; then
+        vpass "gentle-shell: persona.json presente"
+      else
+        vfail "gentle-shell: falta persona.json"
+      fi
+      ;;
+  esac
 
   log ""
   log "  pi"
