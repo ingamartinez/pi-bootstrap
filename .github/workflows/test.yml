@@ -11,8 +11,8 @@ jobs:
     name: artefactos generados y sintaxis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: lib/pins.sh refleja manifest.json
@@ -31,7 +31,7 @@ jobs:
     name: Linux limpio (instala, verifica, idempotencia)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: escenario completo en contenedor
         run: ./tests/docker/run.sh
 
@@ -39,8 +39,8 @@ jobs:
     name: macOS (bash 3.2, dry-run)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: preflight y plan sin escribir nada
