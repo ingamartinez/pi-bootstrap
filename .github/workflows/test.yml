@@ -19,6 +19,12 @@ jobs:
         run: node scripts/gen-pins.mjs --check
       - name: config/profiles refleja scripts/profiles.mjs
         run: node scripts/gen-profiles.mjs --check
+      - name: el tag y la versión que descarga bootstrap.sh coinciden
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          grep -q "PI_BOOTSTRAP_VERSION:-$tag" bootstrap.sh \
+            || { echo "bootstrap.sh no apunta a $tag (usa scripts/release.sh)"; exit 1; }
       - name: sintaxis POSIX/bash
         run: |
           for f in bootstrap.sh bin/pi-bootstrap lib/*.sh tests/docker/*.sh; do
