@@ -8,7 +8,7 @@
 set -eu
 
 REPO="${PI_BOOTSTRAP_REPO:-https://github.com/ingamartinez/pi-bootstrap}"
-VERSION="${PI_BOOTSTRAP_VERSION:-0.1.8}"
+VERSION="${PI_BOOTSTRAP_VERSION:-0.1.9}"
 
 # OJO: con `curl ... | sh` stdin es el propio script y llega agotado, así que el modo interactivo
 # no puede funcionar por esa vía. bin/pi-bootstrap lo detecta y lo dice en vez de asumir respuestas.
