@@ -8,7 +8,7 @@
 set -eu
 
 REPO="${PI_BOOTSTRAP_REPO:-https://github.com/ingamartinez/pi-bootstrap}"
-VERSION="${PI_BOOTSTRAP_VERSION:-0.1.9}"
+VERSION="${PI_BOOTSTRAP_VERSION:-0.2.0}"
 
 # Con `curl ... | sh`, stdin es el propio script y llega agotado. Si hay terminal de control,
 # se reabre como stdin del instalador para que los prompts funcionen igual que desde un checkout.
