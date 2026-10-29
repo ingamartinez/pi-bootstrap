@@ -8,7 +8,7 @@
 set -eu
 
 REPO="${PI_BOOTSTRAP_REPO:-https://github.com/ingamartinez/pi-bootstrap}"
-VERSION="${PI_BOOTSTRAP_VERSION:-0.1.2}"
+VERSION="${PI_BOOTSTRAP_VERSION:-0.1.3}"
 
 self_dir=""
 if [ -f "$0" ]; then
