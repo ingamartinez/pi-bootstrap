@@ -27,6 +27,11 @@
 20. Tier `shell` **entra** sin wizard: shim al binario de `gentle-pi` + `home isolated` + `import-pi`
     + `setup`. Se pierde el runtime Node propio (usamos el pin) y el `upgrade --channel`.
 21. Node: si el dev ya tiene `node` ≥ pin, se reutiliza. No se fuerza el runtime pineado.
+22. Stack de gentle-ai: **`--preset full-gentleman` con los 8 componentes declarados explícitamente**
+    (`claude-theme,context7,persona,engram,gga,opencode-gentle-logo,permissions,skills`), persona
+    `gentleman`, `--pi-background-subagents=on`, canal `stable`. Nada se deja al default.
+23. Skills: el componente `skills` no aplica a Pi; las skills de Pi vienen del pin de `gentle-pi`.
+24. `gga` entra como parte del full; se documenta que requiere `gga init` + `gga install` por repo.
 
 ## Pendientes
 

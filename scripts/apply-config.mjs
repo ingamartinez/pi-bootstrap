@@ -22,14 +22,34 @@ const expand = (p) => p.replace(/^~/, home);
 
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
 
+/** Identidad de un paquete: `npm:gentle-pi@4.5.1` y `npm:gentle-pi` son el mismo. */
+function packageIdentity(spec) {
+  if (typeof spec !== "string") return String(spec);
+  if (spec.startsWith("npm:")) return "npm:" + spec.slice(4).replace(/@[^@/]*$/, "");
+  if (spec.startsWith("git:")) return "git:" + spec.slice(4).replace(/[#@][^#@/]*$/, "");
+  return spec;
+}
+
 function mergeShallow(template, target) {
   const out = { ...target };
   for (const [key, value] of Object.entries(template)) {
     if (Array.isArray(value)) {
       const existing = Array.isArray(out[key]) ? out[key] : [];
-      out[key] = [...new Set([...value, ...existing])];
+      if (key === "packages") {
+        // gentle-ai escribe npm:x sin versión; el template manda y no se duplica por nombre.
+        const seen = new Set(value.map(packageIdentity));
+        out[key] = [...value, ...existing.filter((e) => !seen.has(packageIdentity(e)))];
+      } else {
+        out[key] = [...new Set([...value, ...existing])];
+      }
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
-      out[key] = { ...(out[key] && typeof out[key] === "object" ? out[key] : {}), ...value };
+      if (key === "mcpServers") {
+        // Un servidor se reemplaza entero: mezclar claves deja definiciones híbridas inválidas
+        // (p.ej. context7 con `url` propio y `command`/`args` de gentle-ai).
+        out[key] = { ...(out[key] && typeof out[key] === "object" ? out[key] : {}), ...value };
+      } else {
+        out[key] = { ...(out[key] && typeof out[key] === "object" ? out[key] : {}), ...value };
+      }
     } else {
       out[key] = value;
     }

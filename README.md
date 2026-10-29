@@ -69,6 +69,24 @@ la misma versión que él bundlea) y `upgrade --channel/--rollback` (queda cubie
 
 Quien prefiera un solo hogar en vez de dos: `gentle-shell --link` reutiliza `~/.pi/agent`.
 
+### Qué instala el stack (`full-gentleman`)
+
+Los componentes están declarados en `manifest.json → gentleAi` y se pasan como flags explícitos,
+nunca se delegan a los defaults de gentle-ai. Efecto real con `--agent pi` (medido comparando el
+árbol de un `HOME` limpio antes/después):
+
+| Componente | Qué hace en Pi |
+|---|---|
+| `persona` | `~/.pi/gentle-ai/persona.json` → `{"mode":"gentleman"}` |
+| `engram` | memoria persistente (binario + config) |
+| `context7` | MCP de documentación — **gana nuestra definición** (URL remota), no la stdio de gentle-ai |
+| `gga` | git agent: escribe `~/.config/gga/`, `~/.local/share/gga/`; requiere `gga init` + `gga install` **por repo** |
+| `skills` | **no escribe nada para Pi**: las 29 skills embebidas apuntan a Claude/OpenCode/Cursor/Kimi |
+| `claude-theme`, `opencode-gentle-logo`, `permissions` | sin efecto en Pi |
+
+Las skills que ve un dev de Pi son las **13 del paquete `gentle-pi`** (pinneado en 4.5.1), no el
+componente `skills`. Es determinista por el pin.
+
 ### Perfiles
 
 | Perfil | Proveedores | Independencia |
@@ -109,6 +127,9 @@ node scripts/gen-pins.mjs --check        # lib/pins.sh y manifest.json no diverg
   lo hace con `cp`/node y lo valida leyendo el resultado.
 - **Node**: si ya hay un `node` ≥ pin en `PATH`, se reutiliza; el pin sólo se instala cuando no
   hay ninguno o es más viejo. Es deliberado: no se pisa el runtime del usuario.
+- **`gentle-ai install` escribe `packages` sin versión** (`npm:gentle-pi`) y define `context7`
+  como stdio. El merge dedupe por identidad de paquete y reemplaza servidores MCP enteros; si no,
+  quedarían duplicados pinneados/sin pinnear y un `context7` híbrido inválido (`url` + `command`).
 - **Nunca se copia** del autor: `deviceId`, `auth.json`, `browser-harness.json`, `trust.json`,
   `models.json` (`llm-gateway` es privado) ni `~/.engram/engram.db`.
 

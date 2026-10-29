@@ -214,5 +214,24 @@
     "~/.pi/agent/trust.json",
     "~/.pi/agent/models.json (llm-gateway/baseUrl/apiKey son del autor)",
     "~/.engram/engram.db"
-  ]
+  ],
+  "gentleAi": {
+    "agent": "pi",
+    "scope": "global",
+    "preset": "full-gentleman",
+    "persona": "gentleman",
+    "components": [
+      "claude-theme",
+      "context7",
+      "persona",
+      "engram",
+      "gga",
+      "opencode-gentle-logo",
+      "permissions",
+      "skills"
+    ],
+    "piBackgroundSubagents": "on",
+    "channel": "stable",
+    "note": "Componentes del preset full-gentleman, declarados explícitamente. Con --agent pi, el componente skills no escribe en disco: las skills de Pi vienen del paquete gentle-pi (pinneado). gga pide `gga init` + `gga install` por repo."
+  }
 }

@@ -86,6 +86,15 @@ verify_all() {
       ;;
   esac
 
+  if [ -f "$HOME/.gentle-ai/state.json" ]; then
+    vpass "gentle-ai: $(node -e "
+      const s = require('$HOME/.gentle-ai/state.json');
+      process.stdout.write('persona=' + s.persona + ' preset=' + s.preset + ' componentes=' + (s.components || []).join('+'));
+    " 2>/dev/null || echo 'state.json ilegible')"
+  else
+    vfail "gentle-ai: falta ~/.gentle-ai/state.json"
+  fi
+
   log ""
   log "  pi"
   if pi list >/dev/null 2>&1; then

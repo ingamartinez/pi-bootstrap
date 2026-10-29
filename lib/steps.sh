@@ -202,10 +202,25 @@ setup_gentle_ai() {
     return 0
   fi
   have gentle-ai || die "gentle-ai no está en PATH"
+  local ga_args
+  ga_args=$(node -e "
+    const g = require('$SRC/manifest.json').gentleAi || {};
+    const a = [];
+    if (g.agent) a.push('--agent', g.agent);
+    if (g.scope) a.push('--scope', g.scope);
+    if (g.channel) a.push('--channel', g.channel);
+    if (g.preset) a.push('--preset', g.preset);
+    if (g.persona) a.push('--persona', g.persona);
+    if (Array.isArray(g.components) && g.components.length) a.push('--component', g.components.join(','));
+    if (g.piBackgroundSubagents) a.push('--pi-background-subagents=' + g.piBackgroundSubagents);
+    process.stdout.write(a.join(' '));
+  ") || die "no se pudo leer gentleAi del manifest"
+  log "  gentle-ai install $ga_args"
   # Evita que gentle-ai intente instalar engram por su cuenta (brew/go): ya lo pusimos nosotros.
   export GENTLE_AI_ENGRAM_BIN="$PREFIX/bin/engram"
-  gentle-ai install --agent pi --scope global >/dev/null 2>&1 \
-    || warn "gentle-ai install devolvió error; corre 'gentle-ai install --agent pi --scope global' a mano"
+  # shellcheck disable=SC2086  (los valores del manifest no llevan espacios)
+  gentle-ai install $ga_args >/dev/null 2>&1 \
+    || warn "gentle-ai install devolvió error; corre 'gentle-ai install $ga_args' a mano"
   ok "gentle-ai $(tool_version gentle-ai) configurado"
 }
 
