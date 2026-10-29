@@ -4,49 +4,101 @@ Deja **Pi + Gentle AI + un perfil de modelos** listos en macOS o Linux, sin sudo
 escriba `pi` dentro de cualquier repo y empiece a trabajar.
 
 ```bash
-curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.0/bootstrap.sh \
+curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.7/bootstrap.sh \
   | sh -s -- --profile hybrid-openai --yes
 ```
 
-O desde el checkout (mismo resultado, útil para desarrollar el instalador):
+Desde el checkout (mismo resultado, para desarrollar el instalador):
 
 ```bash
 git clone https://github.com/ingamartinez/pi-bootstrap && cd pi-bootstrap
 ./bootstrap.sh --profile hybrid-openai --yes
 ```
 
-## Estado (POC, 2026-10-29)
+## Estado
 
-Verificado en **Linux limpio** (`ubuntu:24.04`, usuario no-root, sin TTY, sin navegador,
-checkout montado read-only): instalación desde cero, verificación de contenido, segunda corrida
-idempotente y cero escrituras al repo. `./tests/docker/run.sh`. El camino publicado (el one-liner real) se prueba con
-`MODE=published ./tests/docker/run.sh`, y la CI corre ambos en cada push.
+Release actual **v0.1.7**, CI verde en `main` y en cada tag.
 
 | Pieza | Estado |
 |---|---|
-| Binarios pineados (node, pi, gentle-ai, engram, codegraph, claude-code) con sha256 por os/arch | ✅ verificado en Docker |
+| Binarios pineados (node, pi, gentle-ai, engram, codegraph, claude-code) con sha256 por os/arch | ✅ |
 | Config Pi (settings, mcp, 10 agentes, keybindings) con merge conservador | ✅ |
 | Matriz de 5 perfiles × 13 roles → `subagents.json` + `profiles.json` + `web-search.json` | ✅ |
-| Verificación (versiones, JSON, coherencia cruzada de perfiles, paquetes, drift) | ✅ |
-| Idempotencia (segunda corrida sin cambios) | ✅ |
-| Login guiado (deepseek por key, openai/claude por TUI + polling) | ⚠️ escrito, no probado en Docker (no hay navegador ni TTY) |
-| Tier `shell` (gentle-shell) | ✅ verificado en Docker: sin wizard (ver abajo) |
-| `upgrade` con rollback | ❌ pendiente: hoy sólo imprime el procedimiento |
-| `curl \| sh` publicado | ❌ pendiente: falta el repo real y el tag (TODO en `bootstrap.sh`) |
+| Tier `shell` (gentle-shell sin wizard) | ✅ |
+| Stack gentle-ai declarado explícitamente (preset, persona, componentes) | ✅ |
+| `upgrade` (plan, apply, rollback con downgrade real) | ✅ |
+| `reset` (config / tools / shell, con backup previo) | ✅ |
+| Login guiado (deepseek por key; openai y claude por TUI + polling) | ⚠️ escrito, **no ejecutado** todavía en una TTY real |
+| Prueba con un dev externo | ⏳ pendiente |
+
+Lo verificado se comprobó así: **Linux limpio** (`ubuntu:24.04`, usuario no-root, sin TTY, sin
+navegador, checkout montado read-only) en arm64 y amd64, **macOS** con `HOME` aislado (bash 3.2),
+y el **one-liner publicado** en contenedor limpio.
+
+## Comandos
+
+```bash
+pi-bootstrap install --profile <id> [--tiers base,tools,shell] [--yes] [--dry-run] [--skip-auth]
+pi-bootstrap profiles            # perfiles disponibles
+pi-bootstrap profile <id>        # cambiar el perfil activo
+pi-bootstrap auth                # revisar/conectar credenciales del perfil
+pi-bootstrap verify              # ¿quedó todo bien? (exit != 0 si no)
+pi-bootstrap doctor              # diagnóstico sin modificar nada
+pi-bootstrap init [dir]          # preparar un repo: AGENTS.md, trust, codegraph, odd/tasks
+pi-bootstrap upgrade [--apply|--rollback] [--major] [--to <ts>]
+pi-bootstrap reset [--config|--tools|--shell|--all] [--purge-auth] [--dry-run]
+pi-bootstrap export-config       # re-snapshot de config/ desde esta máquina
+```
 
 ## Cómo funciona
 
-`preflight → binarios pineados → gentle-ai → paquetes de pi → config → perfil → auth → verify`
+`preflight → binarios pineados → gentle-ai → paquetes de pi → config → perfil → shell → verify`
 
-Cada paso comprueba antes de instalar y verifica después: correrlo dos veces no cambia nada
-(hay un test que lo exige). El orden importa: `gentle-ai install` **antes** de copiar agentes,
-porque captura los `.md` presentes en disco en ese momento.
+Cada paso comprueba antes de instalar y verifica después: correrlo dos veces no cambia nada (hay un
+test que lo exige). El orden importa: `gentle-ai install` **antes** de copiar agentes, porque captura
+los `.md` presentes en disco en ese momento; y el perfil se **re-aplica** después del
+`gentle-shell setup`, porque ese paso corre `gentle-ai install` y puede regenerar `profiles.json`.
 
 ### Sin Homebrew y sin sudo
 
-`gentle-ai`, `engram` y `node` se bajan como tarballs pineados desde sus releases y se verifican
-con sha256; `pi`, `codegraph` y `claude-code` van por `npm -g --prefix ~/.local`. Un solo camino
-para macOS y Linux, todo bajo `$HOME`.
+`gentle-ai`, `engram` y `node` se bajan como tarballs pineados desde sus releases y se verifican con
+sha256; `pi`, `codegraph` y `claude-code` van por `npm -g --prefix ~/.local`. Un solo camino para
+macOS y Linux, todo bajo `$HOME`. Cada herramienta declara **su** nombre de arquitectura
+(GoReleaser usa `amd64`, nodejs.org usa `x64`) y `scripts/check-urls.mjs` comprueba las 12 URLs
+pineadas en las 4 plataformas.
+
+### Qué instala el stack (`full-gentleman`)
+
+Los componentes están en `manifest.json → gentleAi` y se pasan como flags explícitos; nunca se
+delegan a los defaults de gentle-ai (sin flags, gentle-ai instala su mínimo: persona + engram).
+Efecto real con `--agent pi`, medido comparando el árbol de un `HOME` limpio antes/después:
+
+| Componente | Qué hace en Pi |
+|---|---|
+| `persona` | `~/.pi/gentle-ai/persona.json` → `{"mode":"gentleman"}` |
+| `engram` | memoria persistente (binario + config) |
+| `context7` | MCP de documentación — **gana nuestra definición** (URL remota), no la stdio de gentle-ai |
+| `skills` | **no escribe nada para Pi**: las 29 skills embebidas apuntan a Claude/OpenCode/Cursor/Kimi |
+| `claude-theme`, `opencode-gentle-logo`, `permissions` | sin efecto en Pi |
+| ~~`gga`~~ | **fuera por defecto.** Gate de revisión en pre-commit: bloquea commits y necesita un CLI de proveedor mapeado. Opt-in con `--component ...,gga` |
+
+Las skills que ve un dev de Pi son las **13 del paquete `gentle-pi`** (pinneado), no el componente
+`skills`: eso lo determina el pin, no la selección de gentle-ai.
+
+### Perfiles
+
+| Perfil | Proveedores | Independencia |
+|---|---|---|
+| `hybrid-claude` | deepseek + claude | cross-provider |
+| `hybrid-openai` | deepseek + openai | cross-provider |
+| `full-claude` | claude | same-family |
+| `full-openai` | openai | same-family |
+| `full-deepseek` | deepseek | same-family |
+
+La matriz vive en `scripts/profiles.mjs` (única fuente de verdad, 13 roles). Los perfiles
+`same-family` verifican con la misma familia que producen: sirven para trabajo diario, no para gates
+críticos, y `verify` lo advierte. `apply-profile` deriva los tres archivos de runtime y detecta
+desincronización entre ellos.
 
 ### Tier `shell` sin wizard
 
@@ -60,61 +112,12 @@ shim ~/.local/bin/gentle-shell → <gentle-pi>/bin/gentle-shell.mjs
 gentle-shell home isolated      # hogar propio en ~/.gentle-shell (no toca ~/.pi)
 gentle-shell home import-pi     # reutiliza auth.json y mcp.json de pi; nunca sobreescribe
 gentle-shell setup              # aprovisiona con gentle-ai (≈9s, sin navegador)
-apply-profile                   # se re-aplica: setup corre gentle-ai install y puede regenerar profiles.json
+apply-profile                   # se re-aplica por lo dicho arriba
 ```
 
-Frente al instalador oficial se pierde su runtime Node propio (usamos el node pineado 24.21.0,
-la misma versión que él bundlea) y `upgrade --channel/--rollback` (queda cubierto por nuestro
-`upgrade`, que sube el pin de `gentle-pi`).
-
+Frente al instalador oficial se pierde su runtime Node propio (usamos el node pineado, la misma
+versión que él bundlea) y `upgrade --channel/--rollback` (queda cubierto por nuestro `upgrade`).
 Quien prefiera un solo hogar en vez de dos: `gentle-shell --link` reutiliza `~/.pi/agent`.
-
-### Qué instala el stack (`full-gentleman`)
-
-Los componentes están declarados en `manifest.json → gentleAi` y se pasan como flags explícitos,
-nunca se delegan a los defaults de gentle-ai. Efecto real con `--agent pi` (medido comparando el
-árbol de un `HOME` limpio antes/después):
-
-| Componente | Qué hace en Pi |
-|---|---|
-| `persona` | `~/.pi/gentle-ai/persona.json` → `{"mode":"gentleman"}` |
-| `engram` | memoria persistente (binario + config) |
-| `context7` | MCP de documentación — **gana nuestra definición** (URL remota), no la stdio de gentle-ai |
-| `gga` | git agent: escribe `~/.config/gga/`, `~/.local/share/gga/`; requiere `gga init` + `gga install` **por repo** |
-| `skills` | **no escribe nada para Pi**: las 29 skills embebidas apuntan a Claude/OpenCode/Cursor/Kimi |
-| `claude-theme`, `opencode-gentle-logo`, `permissions` | sin efecto en Pi |
-
-Las skills que ve un dev de Pi son las **13 del paquete `gentle-pi`** (pinneado en 4.5.1), no el
-componente `skills`. Es determinista por el pin.
-
-**`gga` queda fuera por defecto**: es un gate de revisión en pre-commit que bloquea commits y
-necesita un CLI de proveedor mapeado. Se activa añadiéndolo a `--component`.
-
-Asimetría de gentle-ai, verificada: `--component` manda en el plan pero **no desinstala**. En una
-máquina donde gga ya estaba, el plan resuelve 7 componentes y sin embargo `state.json` y las carpetas
-`~/.config/gga` y `~/.local/share/gga` siguen ahí; hay que retirarlas a mano. En una instalación
-limpia no aparecen.
-
-### Perfiles
-
-| Perfil | Proveedores | Independencia |
-|---|---|---|
-| `hybrid-claude` | deepseek + claude | cross-provider |
-| `hybrid-openai` | deepseek + openai | cross-provider |
-| `full-claude` | claude | same-family |
-| `full-openai` | openai | same-family |
-| `full-deepseek` | deepseek | same-family |
-
-La matriz vive en `scripts/profiles.mjs` (única fuente de verdad, 13 roles). Los perfiles
-`same-family` verifican con la misma familia que producen: sirven para trabajo diario, no para
-gates críticos, y `verify` lo advierte.
-
-### Comandos
-
-```
-pi-bootstrap [install] [--tiers base,tools] [--profile <id>] [--yes] [--dry-run] [--skip-auth]
-pi-bootstrap profiles | profile <id> | auth | verify | doctor | init [dir] | upgrade
-```
 
 ## Actualizar
 
@@ -129,15 +132,16 @@ De dónde salen las versiones: registro de npm (`pi`, `codegraph`, `claude-code`
 `nodejs.org/dist/index.json` + `SHASUMS256.txt` para Node (sólo LTS), y la API de releases de GitHub
 para `gentle-ai`/`engram` (digest del asset o fichero de checksums).
 
-**Guard de major**: por defecto sólo propone cambios dentro del mismo major — saltar de Node 24 a 26
-o de gentle-ai 4 a 5 sin querer es un riesgo. `--major` lo permite explícitamente.
-
-Antes de aplicar, todo se respalda en `~/.pi-bootstrap/rollback/<ts>/` (manifest + configuración +
-`installed.json`). El rollback restaura ese manifest **en el working tree del repo** y reinstala, así
-que después conviene `git diff manifest.json` para decidir si se commitea.
-
-El estado instalado (pin vs versión real, perfil y selección de gentle-ai) queda en
-`~/.pi-bootstrap/installed.json`, que es lo que `upgrade` usa para saber de dónde partir.
+- **Guard de major**: por defecto sólo propone cambios dentro del mismo major — saltar de Node 24 a
+  26 o de gentle-ai 4 a 5 sin querer es un riesgo. `--major` lo permite.
+- **Rollback que baja de verdad**: restaura el manifest, la configuración y aplica el modo
+  `PI_BOOTSTRAP_EXACT=1`, que exige la versión exacta del pin. Sin eso, la comprobación
+  `instalado ≥ pin` reutilizaba el binario nuevo y el "rollback" sólo cambiaba el manifest.
+- El backup vive en `~/.pi-bootstrap/rollback/<ts>/` (manifest + configuración + `installed.json`).
+  El rollback restaura ese manifest **en el working tree del repo**: después conviene
+  `git diff manifest.json` para decidir si se commitea.
+- El estado instalado (pin vs versión real, perfil y selección de gentle-ai) queda en
+  `~/.pi-bootstrap/installed.json`, que es de donde `upgrade` parte.
 
 ## Borrar
 
@@ -148,49 +152,77 @@ pi-bootstrap reset --tools --yes         # binarios en ~/.local + paquetes de pi
 pi-bootstrap reset --all --yes           # config + tools (+ --shell)
 ```
 
-- `--config` respalda antes en `~/.pi/backups/pi-bootstrap-reset-<ts>/`. Nada se borra sin `--yes`.
-- `--tools` quita lo que instaló el bootstrap (no toca binarios del sistema).
-- `--purge-auth` es el único que toca credenciales (`auth.json`, `trust.json`, `browser-harness.json`)
-  y es irreversible: no se respaldan.
+- `--config` **respalda antes** en `~/.pi/backups/pi-bootstrap-reset-<ts>/`. Nada se borra sin
+  `--yes`.
+- `--tools` quita lo que instaló el bootstrap, no binarios del sistema.
+- `--purge-auth` es el único que toca credenciales (`auth.json`, `trust.json`,
+  `browser-harness.json`) y es irreversible: no se respaldan.
 - Después de `reset --config`, se recupera con `pi-bootstrap install --profile <perfil> --yes`.
 
 ## Pruebas
 
 ```bash
-./tests/docker/run.sh                    # Linux limpio (necesita el daemon de Docker)
+./tests/docker/run.sh                                # Linux limpio: instala, verifica, idempotencia, reset y recuperación
+MODE=published ./tests/docker/run.sh                 # el one-liner real contra el tag publicado
+PLATFORM=linux/amd64 ./tests/docker/run.sh           # la arquitectura que no es la de tu máquina (emulada)
 PROFILE=full-openai ./tests/docker/run.sh
-node scripts/gen-profiles.mjs --check    # la matriz y los perfiles no divergen
-node scripts/gen-pins.mjs --check        # lib/pins.sh y manifest.json no divergen
+node scripts/gen-profiles.mjs --check                # la matriz y los perfiles no divergen
+node scripts/gen-pins.mjs --check                    # lib/pins.sh y manifest.json no divergen
+node scripts/check-urls.mjs                          # las 12 URLs pineadas existen (4 plataformas)
 ```
 
-## Trampas ya documentadas
+La CI corre en cada push a `main` y en cada tag: drift de generados + sintaxis POSIX/bash, escenario
+completo en contenedor Linux, smoke de macOS (bash 3.2) y el guard tag↔versión.
 
-- **Pin de git**: pi usa `git:repo@<ref>`. Con `#<sha>` falla en silencio (el paquete no se
-  instala); hay un assert que lo detecta.
-- **`gentle-ai install` ya trae** `gentle-pi`, `gentle-engram`, `pi-web-access` y `pi-btw`:
-  nuestros `pi install` de esos son redundantes, pero no dañinos.
-- **`~/.pi/gentle-ai/` es human-controlled**: un tool de modelo no puede escribirlo; el bootstrap
-  lo hace con `cp`/node y lo valida leyendo el resultado.
-- **Node**: si ya hay un `node` ≥ pin en `PATH`, se reutiliza; el pin sólo se instala cuando no
-  hay ninguno o es más viejo. Es deliberado: no se pisa el runtime del usuario.
-- **`gentle-ai install` escribe `packages` sin versión** (`npm:gentle-pi`) y define `context7`
-  como stdio. El merge dedupe por identidad de paquete y reemplaza servidores MCP enteros; si no,
+## Trampas documentadas
+
+Todas se descubrieron ejecutando, y la mayoría tiene un assert que las vigila.
+
+- **Pin de git**: pi usa `git:repo@<ref>`. Con `#<sha>` falla en silencio (el paquete no se instala).
+- **`{arch}` no es universal**: GoReleaser publica `amd64`, nodejs.org publica `x64`. Con un solo
+  nombre, el camino `linux/x64` da 404 y en arm64 (donde coinciden) no lo notas.
+- **`gentle-ai --component` es aditivo**: quitar un componente del manifest no lo desinstala en una
+  máquina ya instalada; sólo evita instalarlo en máquinas limpias. Para quitarlo hay que retirar
+  `~/.config/gga` y `~/.local/share/gga` a mano.
+- **`gentle-ai install` escribe `packages` sin versión** (`npm:gentle-pi`) y define `context7` como
+  stdio. El merge dedupe por identidad de paquete y reemplaza servidores MCP enteros; si no,
   quedarían duplicados pinneados/sin pinnear y un `context7` híbrido inválido (`url` + `command`).
+- **`gentle-ai install` ya trae** `gentle-pi`, `gentle-engram`, `pi-web-access` y `pi-btw`: nuestros
+  `pi install` de esos son redundantes, pero no dañinos.
+- **`~/.pi/gentle-ai/` es human-controlled**: un tool de modelo no puede escribirlo; el bootstrap lo
+  hace con `cp`/node y valida leyendo el resultado.
+- **Node**: si ya hay un `node` ≥ pin en `PATH`, se reutiliza; el pin sólo se instala cuando no hay
+  ninguno o es más viejo. Es deliberado: no se pisa el runtime del usuario. Por eso
+  `~/.local/bin/node` puede no existir aunque el pin diga 24.x.
+- **`reset` debe respaldar antes de borrar**: la primera versión respaldaba después y dejaba el
+  backup vacío con los archivos ya borrados.
+- **Flags de subcomando**: `upgrade --apply` / `--rollback` hay que reenviarlos tal cual; el parser
+  del CLI no debe intentar interpretarlos.
 - **Nunca se copia** del autor: `deviceId`, `auth.json`, `browser-harness.json`, `trust.json`,
   `models.json` (`llm-gateway` es privado) ni `~/.engram/engram.db`.
 
 ## Estructura
 
 ```
-bootstrap.sh                 entry (checkout o curl | sh)
-bin/pi-bootstrap             CLI
-manifest.json                pins: versiones, sha256, tiers, paquetes, qué se copia
-lib/{common,steps,verify}.sh pasos idempotentes
-lib/pins.sh                  GENERADO desde manifest.json (existe para instalar node sin node)
+bootstrap.sh                  entry (checkout o curl | sh, descarga el tarball del tag)
+bin/pi-bootstrap              CLI
+manifest.json                 pins: versiones, sha256, archMap, tiers, gentleAi, paquetes, qué se copia
+lib/{common,steps,verify,reset}.sh
+lib/pins.sh                   GENERADO desde manifest.json (existe para instalar node sin node)
 config/pi/{settings,mcp,keybindings}.json · config/pi/agents/*.md
-config/profiles/*.json       GENERADOS desde scripts/profiles.mjs
+config/profiles/*.json        GENERADOS desde scripts/profiles.mjs
 config/gentle-ai/{channel,background-subagents}.json
-scripts/*.mjs                perfiles, apply, export, pins, auth key, trust
-project/AGENTS.md            plantilla para `pi-bootstrap init`
-tests/docker/                Linux limpio + asserts + idempotencia
+scripts/profiles.mjs          matriz de 13 roles (fuente de verdad de los perfiles)
+scripts/{gen-profiles,apply-profile,apply-config,export-config,gen-pins,check-urls,upgrade,record-state}.mjs
+scripts/{set-api-key,trust-project}.mjs
+scripts/release.sh            fija versión, commitea, tagea y publica
+project/AGENTS.md             plantilla para `pi-bootstrap init`
+docs/AUTH.md                  el paso humano por proveedor
+tests/docker/                 Dockerfile, escenario, asserts, modo published
 ```
+
+## Autenticación
+
+Ver [`docs/AUTH.md`](docs/AUTH.md). Resumen: `deepseek` se resuelve con una key (30 segundos, sin
+navegador); `openai` y `claude` requieren un login en la TUI y el bootstrap espera comprobando
+`pi auth check`. El bootstrap **nunca** copia credenciales de otra máquina.
