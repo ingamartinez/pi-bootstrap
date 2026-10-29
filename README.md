@@ -4,15 +4,23 @@ Deja **Pi + Gentle AI + un perfil de modelos** listos en macOS o Linux, sin sudo
 escriba `pi` dentro de cualquier repo y empiece a trabajar.
 
 ```bash
-git clone <repo> && cd pi-bootstrap
-./bootstrap.sh --profile hybrid-openai --yes      # instala, configura y verifica
+curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.0/bootstrap.sh \
+  | sh -s -- --profile hybrid-openai --yes
+```
+
+O desde el checkout (mismo resultado, útil para desarrollar el instalador):
+
+```bash
+git clone https://github.com/ingamartinez/pi-bootstrap && cd pi-bootstrap
+./bootstrap.sh --profile hybrid-openai --yes
 ```
 
 ## Estado (POC, 2026-10-29)
 
 Verificado en **Linux limpio** (`ubuntu:24.04`, usuario no-root, sin TTY, sin navegador,
 checkout montado read-only): instalación desde cero, verificación de contenido, segunda corrida
-idempotente y cero escrituras al repo. `./tests/docker/run.sh`.
+idempotente y cero escrituras al repo. `./tests/docker/run.sh`. El camino publicado (el one-liner real) se prueba con
+`MODE=published ./tests/docker/run.sh`, y la CI corre ambos en cada push.
 
 | Pieza | Estado |
 |---|---|

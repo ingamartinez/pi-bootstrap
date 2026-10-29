@@ -1,0 +1,49 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  drift:
+    name: artefactos generados y sintaxis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: lib/pins.sh refleja manifest.json
+        run: node scripts/gen-pins.mjs --check
+      - name: config/profiles refleja scripts/profiles.mjs
+        run: node scripts/gen-profiles.mjs --check
+      - name: sintaxis POSIX/bash
+        run: |
+          for f in bootstrap.sh bin/pi-bootstrap lib/*.sh tests/docker/*.sh; do
+            echo "→ $f"
+            bash -n "$f"
+          done
+          sh -n bootstrap.sh
+
+  linux-docker:
+    name: Linux limpio (instala, verifica, idempotencia)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: escenario completo en contenedor
+        run: ./tests/docker/run.sh
+
+  macos-smoke:
+    name: macOS (bash 3.2, dry-run)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: preflight y plan sin escribir nada
+        run: ./bootstrap.sh --profile full-deepseek --dry-run
+      - name: perfiles legibles con el node del runner
+        run: ./bin/pi-bootstrap profiles
