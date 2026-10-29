@@ -7,19 +7,15 @@
 # pineado, lo deja en ~/.cache/pi-bootstrap/src/<version> y ejecuta bin/pi-bootstrap.
 set -eu
 
-# TODO(distribución): fijar el repositorio real cuando se publique.
-REPO="${PI_BOOTSTRAP_REPO:-https://github.com/CHANGE_ME/pi-bootstrap}"
+REPO="${PI_BOOTSTRAP_REPO:-https://github.com/ingamartinez/pi-bootstrap}"
 VERSION="${PI_BOOTSTRAP_VERSION:-0.1.0}"
 
-self_dir=$(CDPATH= cd -P "$(dirname "$0")" && pwd)
-if [ -f "$self_dir/bin/pi-bootstrap" ]; then
-  exec "$self_dir/bin/pi-bootstrap" "$@"
+self_dir=""
+if [ -f "$0" ]; then
+  self_dir=$(CDPATH= cd -P "$(dirname "$0")" && pwd)
 fi
-
-if [ "$REPO" = "https://github.com/CHANGE_ME/pi-bootstrap" ]; then
-  printf 'bootstrap: este stub todavía no está publicado.\n' >&2
-  printf 'Clona el repo y corre ./bootstrap.sh desde el checkout.\n' >&2
-  exit 1
+if [ -n "$self_dir" ] && [ -f "$self_dir/bin/pi-bootstrap" ]; then
+  exec "$self_dir/bin/pi-bootstrap" "$@"
 fi
 
 cache="${XDG_CACHE_HOME:-$HOME/.cache}/pi-bootstrap/src/$VERSION"
