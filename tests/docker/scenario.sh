@@ -58,6 +58,16 @@ else
   pass "checkout montado read-only (no se pudo escribir)"
 fi
 
+say "modo interactivo (respuestas pipeadas, hook de test)"
+printf 's\nn\n' | PI_BOOTSTRAP_ASSUME_TTY=1 "$SRC/bootstrap.sh" --profile "$PROFILE" --dry-run > /tmp/interactive.log 2>&1
+assert_eq "interactivo exit code" "$?" "0"
+grep -q "tiers:   base,tools,shell" /tmp/interactive.log \
+  && pass "la respuesta al tier shell se aplicó" \
+  || fail "la respuesta al tier shell no se aplicó"
+grep -q "auth:    después" /tmp/interactive.log \
+  && pass "la respuesta de auth se aplicó" \
+  || fail "la respuesta de auth no se aplicó"
+
 say "reset --config y recuperación"
 "$SRC/bin/pi-bootstrap" reset --config --yes > /tmp/reset.log 2>&1
 RC_R=$?

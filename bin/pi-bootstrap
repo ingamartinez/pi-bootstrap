@@ -10,6 +10,7 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . "$SRC/lib/reset.sh"
 
 TIERS="${PI_BOOTSTRAP_TIERS:-base,tools}"
+TIERS_SET=0
 PROFILE="${PI_BOOTSTRAP_PROFILE:-}"
 PROFILE_REQUIRES=""
 ASSUME_YES=0 DRY_RUN=0 SKIP_AUTH=0 FORCE=0 STRICT=0
@@ -61,8 +62,8 @@ while [ $# -gt 0 ]; do
     --shell) RESET_SHELL=1; shift ;;
     --all) RESET_ALL=1; shift ;;
     --purge-auth) PURGE_AUTH=1; shift ;;
-    --tiers) TIERS="$2"; shift 2 ;;
-    --tiers=*) TIERS="${1#*=}"; shift ;;
+    --tiers) TIERS="$2"; TIERS_SET=1; shift 2 ;;
+    --tiers=*) TIERS="${1#*=}"; TIERS_SET=1; shift ;;
     --profile) PROFILE="$2"; shift 2 ;;
     --profile=*) PROFILE="${1#*=}"; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
@@ -102,16 +103,19 @@ load_profile_meta() {
 
 ask_profile() {
   [ -n "$PROFILE" ] && return 0
-  if [ ! -t 0 ]; then
-    die "falta --profile. Disponibles: $(ls "$SRC/config/profiles" | sed 's/\.json//' | tr '\n' ' ')"
+  local avail; avail=$(ls "$SRC/config/profiles" | sed 's/\.json//' | tr '\n' ' ')
+  # Sin terminal no se inventa una elección: se pide explícita.
+  if ! interactive; then
+    die "falta --profile (disponibles: $avail)"
   fi
   log ""
   log "¿Qué perfil de modelos quieres?"
-  local ids="" f i=1
+  local ids="" f i=1 label
   for f in "$SRC"/config/profiles/*.json; do
     [ -f "$f" ] || continue
     ids="$ids $(basename "$f" .json)"
-    printf '  %d) %s\n' "$i" "$(basename "$f" .json)" >&2
+    label=$(node -e "process.stdout.write(require('$f').label)" 2>/dev/null || basename "$f" .json)
+    printf '  %d) %-14s %s\n' "$i" "$(basename "$f" .json)" "$label" >&2
     i=$((i + 1))
   done
   printf 'Número o id [hybrid-openai]: ' >&2
@@ -124,14 +128,39 @@ ask_profile() {
   export PROFILE
 }
 
+ask_tiers() {
+  [ "${TIERS_SET:-0}" = "1" ] && return 0
+  interactive || return 0
+  case ",$TIERS," in
+    *",shell,"*) return 0 ;;
+  esac
+  if ask_yes_no "¿Instalar también el tier shell (gentle-shell, home aislado)?" n; then
+    TIERS="$TIERS,shell"
+    export TIERS
+  fi
+}
+
+ask_auth_preference() {
+  [ "${SKIP_AUTH:-0}" = "1" ] && return 0
+  interactive || return 0
+  if ! ask_yes_no "¿Conectar credenciales ahora (abre la TUI de pi / Claude Code)?" s; then
+    SKIP_AUTH=1
+    export SKIP_AUTH
+    log "  ok: lo dejas para después con 'pi-bootstrap auth'"
+  fi
+}
+
 cmd_install() {
   preflight
   ask_profile
+  ask_tiers
+  ask_auth_preference
   load_profile_meta
 
   step "plan"
   log "  tiers:   $TIERS"
   log "  perfil:  ${PROFILE:-<sin definir>}${PROFILE_REQUIRES:+ (proveedores: $PROFILE_REQUIRES)}"
+  log "  auth:    $( [ "$SKIP_AUTH" = "1" ] && echo 'después (pi-bootstrap auth)' || echo 'ahora' )"
   log "  prefijo: $PREFIX"
   log "  pasos:   preflight → binarios → gentle-ai → paquetes pi → config → perfil → auth → verify"
 
@@ -139,6 +168,10 @@ cmd_install() {
     log ""
     log "(--dry-run) nada modificado"
     return 0
+  fi
+
+  if ! confirm "¿Procedo con la instalación?"; then
+    log "cancelado"; return 1
   fi
 
   install_tier_tools

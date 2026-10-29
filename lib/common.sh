@@ -89,11 +89,34 @@ manifest_get() {
   node -e "const m=require('$SRC/manifest.json'); const v=$1; console.log(typeof v==='string'?v:JSON.stringify(v))"
 }
 
+# ¿podemos preguntar? Sólo con stdin y stdout de terminal.
+# PI_BOOTSTRAP_ASSUME_TTY=1 fuerza "sí hay terminal" para poder probar los prompts con respuestas
+# pipeadas (hook de test; no usar en producción).
+interactive() {
+  [ "${ASSUME_YES:-0}" = "1" ] && return 1
+  [ "${PI_BOOTSTRAP_ASSUME_TTY:-0}" = "1" ] && return 0
+  [ -t 0 ] && [ -t 1 ]
+}
+
 confirm() {
-  # confirm <pregunta>; respeta --yes
+  # confirm <pregunta>: 0 = sí, 1 = no.
+  # --yes ⇒ sí sin preguntar. Sin TTY y sin --yes ⇒ NO (nunca se asume un sí).
   [ "${ASSUME_YES:-0}" = "1" ] && return 0
+  interactive || return 1
   printf '%s [s/N] ' "$1" >&2
   local reply=""
   read -r reply || reply=""
+  case "$reply" in s|S|si|sí|y|Y|yes) return 0 ;; *) return 1 ;; esac
+}
+
+ask_yes_no() {
+  # ask_yes_no <pregunta> <default: s|n>
+  local def="$2" prompt
+  [ "${ASSUME_YES:-0}" = "1" ] && { [ "$def" = "s" ]; return; }
+  interactive || { [ "$def" = "s" ]; return; }
+  if [ "$def" = "s" ]; then prompt="$1 [S/n] "; else prompt="$1 [s/N] "; fi
+  printf '%s' "$prompt" >&2
+  local reply=""; read -r reply || reply=""
+  [ -z "$reply" ] && { [ "$def" = "s" ]; return; }
   case "$reply" in s|S|si|sí|y|Y|yes) return 0 ;; *) return 1 ;; esac
 }

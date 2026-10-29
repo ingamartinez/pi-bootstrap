@@ -119,6 +119,34 @@ Frente al instalador oficial se pierde su runtime Node propio (usamos el node pi
 versión que él bundlea) y `upgrade --channel/--rollback` (queda cubierto por nuestro `upgrade`).
 Quien prefiera un solo hogar en vez de dos: `gentle-shell --link` reutiliza `~/.pi/agent`.
 
+## ¿Pregunta o va de una?
+
+Tres modos, sin ambigüedad:
+
+| Situación | Comportamiento |
+|---|---|
+| Terminal interactiva, sin `--yes` | **Pregunta**: perfil (si falta), tier `shell`, conectar credenciales ahora o después… y **confirma antes de tocar nada** |
+| Con `--yes` | No pregunta nada: usa los flags y los valores por defecto. Es el modo para CI y para el one-liner |
+| Sin terminal y sin `--yes` | **Falla** con instrucciones en vez de asumir un sí |
+
+Las preguntas del install son tres como máximo:
+
+```
+¿Qué perfil de modelos quieres?
+  1) full-claude    Todo Claude (vía Claude Code / claude-bridge)
+  ...
+¿Instalar también el tier shell (gentle-shell, home aislado)? [s/N]
+¿Conectar credenciales ahora (abre la TUI de pi / Claude Code)? [S/n]
+¿Procedo con la instalación? [s/N]
+```
+
+y el plan que imprime justo después refleja las respuestas (`tiers:`, `auth:`), para que veas qué
+vas a instalar antes de aceptar. `reset` también confirma: `--dry-run` enseña la lista y sin `--yes`
+no borra nada.
+
+> Para probar los prompts sin terminal está `PI_BOOTSTRAP_ASSUME_TTY=1`, que sólo se usa en los
+> tests (`printf 's\nn\n' \| … --dry-run`). No cambia el comportamiento normal.
+
 ## Actualizar
 
 ```bash

@@ -70,20 +70,13 @@ cmd_reset() {
   fi
 
   step "reset"
-  [ "$do_config" = 1 ] && log "  configuración: settings, mcp, subagents, keybindings, web-search, gentle-ai, agentes"
-  [ "$do_tools" = 1 ] && log "  herramientas: binarios en $PREFIX, node pineado, paquetes de pi"
-  [ "$do_shell" = 1 ] && log "  gentle-shell: ~/.gentle-shell"
-  [ "$do_auth" = 1 ] && warn "credenciales: auth.json, trust.json, browser-harness.json (irreversible)"
 
-  # El backup va ANTES de borrar: si no, respalda el vacío que dejó el bucle.
-  if [ "$do_config" = 1 ] && [ "$DRY_RUN" != "1" ]; then reset_backup_config; fi
-
-  local f count=0
+  # 1) inventario (no toca nada)
+  local list="" f
   while IFS= read -r f; do
     [ -e "$f" ] || [ -L "$f" ] || continue
-    count=$((count + 1))
-    if [ "$DRY_RUN" = "1" ]; then log "  borraría $f"
-    else log "  borrando $f"; rm -rf "$f"; fi
+    list="$list$f
+"
   done <<EOF
 $(if [ "$do_config" = 1 ]; then reset_targets_config; fi
   if [ "$do_tools" = 1 ]; then reset_targets_tools; fi
@@ -91,17 +84,42 @@ $(if [ "$do_config" = 1 ]; then reset_targets_config; fi
   if [ "$do_auth" = 1 ]; then reset_targets_auth; fi)
 EOF
 
+  local count; count=$(printf '%s' "$list" | grep -c . || true)
+
+  log "  configuración: $( [ "$do_config" = 1 ] && echo 'settings, mcp, subagents, keybindings, web-search, gentle-ai, agentes' || echo 'no')"
+  log "  herramientas:  $( [ "$do_tools" = 1 ] && echo "binarios en $PREFIX, node pineado, paquetes de pi" || echo 'no')"
+  log "  gentle-shell:  $( [ "$do_shell" = 1 ] && echo '~/.gentle-shell' || echo 'no')"
+  [ "$do_auth" = 1 ] && warn "credenciales: auth.json, trust.json, browser-harness.json (irreversible)"
+
   if [ "$DRY_RUN" = "1" ]; then
+    printf '%s' "$list" | while IFS= read -r f; do [ -n "$f" ] && log "  borraría $f"; done
     log ""
     log "(--dry-run) $count elemento(s); nada borrado"
     return 0
   fi
 
   if [ "$count" = "0" ]; then ok "no había nada que borrar"; return 0; fi
+
+  # 2) confirmación explícita (--yes la salta; sin TTY no se asume nada)
+  if [ "${ASSUME_YES:-0}" != "1" ]; then
+    interactive || die "sin TTY: añade --yes para confirmar, o --dry-run para verlo"
+    printf '%s' "$list" | while IFS= read -r f; do [ -n "$f" ] && log "  borraría $f"; done
+    confirm "¿Borrar $count elemento(s)? Es irreversible" || { ok "cancelado, no se borró nada"; return 1; }
+  fi
+
+  # 3) backup de config ANTES de borrar
+  if [ "$do_config" = 1 ]; then reset_backup_config; fi
+
+  # 4) borrado
+  printf '%s' "$list" | while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    log "  borrando $f"
+    rm -rf "$f"
+  done
+
   hash -r 2>/dev/null || true
   ok "$count elemento(s) eliminados"
-  if [ "$do_tools" = 1 ]; then
-    log "  PATH de los rc del shell: deja el bloque '# >>> pi-bootstrap >>>' o quítalo a mano"
-  fi
-  [ "$do_config" = 1 ] && log "  vuelve a levantar todo con: pi-bootstrap install --profile <perfil> --yes"
+  [ "$do_tools" = 1 ] && log "  el bloque '# >>> pi-bootstrap >>>' de los rc del shell se puede quitar a mano"
+  [ "$do_config" = 1 ] && log "  recupera todo con: pi-bootstrap install --profile <perfil> --yes"
+  return 0
 }
