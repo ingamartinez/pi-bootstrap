@@ -1,0 +1,75 @@
+{
+  "schema": "pi-bootstrap.profile/1",
+  "id": "full-openai",
+  "label": "Todo OpenAI",
+  "requires": [
+    "openai"
+  ],
+  "independence": "same-family",
+  "roles": {
+    "orchestrator": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "gentle-ai-explore": {
+      "model": "openai/gpt-5.4-mini",
+      "thinking": "low"
+    },
+    "gentle-ai-worker": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "gentle-ai-verify": {
+      "model": "openai/gpt-6.1-sol",
+      "thinking": "high"
+    },
+    "review-readability": {
+      "model": "openai/gpt-5.4-mini",
+      "thinking": "high"
+    },
+    "review-resilience": {
+      "model": "openai/gpt-5.4-mini",
+      "thinking": "high"
+    },
+    "review-reliability": {
+      "model": "openai/gpt-5.4-mini",
+      "thinking": "high"
+    },
+    "review-risk": {
+      "model": "openai/gpt-6.1-sol",
+      "thinking": "high"
+    },
+    "review-refuter": {
+      "model": "openai/gpt-6-astra",
+      "thinking": "high"
+    },
+    "review-validator": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "jd-judge-a": {
+      "model": "openai/gpt-6-astra",
+      "thinking": "high"
+    },
+    "jd-judge-b": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "jd-fix-agent": {
+      "model": "openai/gpt-6-luna",
+      "thinking": "high"
+    }
+  },
+  "settings": {
+    "defaultProvider": "openai",
+    "defaultModel": "gpt-6.1-sol",
+    "defaultThinkingLevel": "high"
+  },
+  "webSearch": {
+    "provider": "openai",
+    "model": "gpt-6-luna"
+  },
+  "notes": [
+    "Verifica con la misma familia que produce: no apto para gates críticos."
+  ]
+}

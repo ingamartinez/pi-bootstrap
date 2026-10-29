@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# pi-bootstrap — instalador de Pi + Gentle AI + perfil de modelos.
+set -uo pipefail
+
+SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+. "$SRC/lib/common.sh"
+. "$SRC/lib/pins.sh"
+. "$SRC/lib/steps.sh"
+. "$SRC/lib/verify.sh"
+
+TIERS="${PI_BOOTSTRAP_TIERS:-base,tools}"
+PROFILE="${PI_BOOTSTRAP_PROFILE:-}"
+PROFILE_REQUIRES=""
+ASSUME_YES=0 DRY_RUN=0 SKIP_AUTH=0 FORCE=0 STRICT=0
+CMD=""
+
+usage() {
+  cat <<'EOF'
+pi-bootstrap — deja Pi listo en macOS o Linux, sin sudo.
+
+Uso:
+  pi-bootstrap [install] [opciones]     instala y configura todo
+  pi-bootstrap profiles                 lista los perfiles de modelos
+  pi-bootstrap profile <id>             cambia el perfil activo
+  pi-bootstrap auth                     revisa/conecta credenciales del perfil
+  pi-bootstrap verify                   verifica que todo quedó bien
+  pi-bootstrap doctor                   diagnóstico sin modificar nada
+  pi-bootstrap init [dir]               prepara un repo (AGENTS.md, trust, codegraph)
+  pi-bootstrap upgrade                  plan de actualización (pineado → nuevo)
+  pi-bootstrap export-config            re-snapshotea config/ desde esta máquina
+
+Opciones:
+  --tiers <lista>    base,tools,shell (default: base,tools)
+  --profile <id>     perfil de modelos (si falta y hay TTY, pregunta)
+  --yes              no preguntar nada
+  --dry-run          muestra el plan sin ejecutar
+  --skip-auth        no abre logins (CI, contenedores)
+  --force            re-aplica pasos ya hechos (gentle-ai install, agentes)
+  --prefix <dir>     prefijo de instalación (default: ~/.local)
+  --strict           verify falla también ante avisos
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    install|profiles|profile|auth|verify|doctor|init|upgrade|export-config) CMD="$1"; shift ;;
+    --tiers) TIERS="$2"; shift 2 ;;
+    --tiers=*) TIERS="${1#*=}"; shift ;;
+    --profile) PROFILE="$2"; shift 2 ;;
+    --profile=*) PROFILE="${1#*=}"; shift ;;
+    --yes|-y) ASSUME_YES=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --skip-auth) SKIP_AUTH=1; shift ;;
+    --force) FORCE=1; shift ;;
+    --strict) STRICT=1; shift ;;
+    --prefix) PREFIX="$2"; shift 2 ;;
+    --prefix=*) PREFIX="${1#*=}"; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "opción desconocida: $1 (usa --help)" ;;
+  esac
+done
+export ASSUME_YES DRY_RUN SKIP_AUTH FORCE STRICT PREFIX
+
+list_profiles() {
+  local f
+  for f in "$SRC"/config/profiles/*.json; do
+    [ -f "$f" ] || continue
+    if have node; then
+      node -e "const p=require('$f'); console.log('  '+p.id.padEnd(14)+p.label+'  [requiere: '+p.requires.join(', ')+']')"
+    else
+      basename "$f" .json | sed 's/^/  /'
+    fi
+  done
+}
+
+load_profile_meta() {
+  [ -n "$PROFILE" ] || return 0
+  [ -f "$SRC/config/profiles/$PROFILE.json" ] || die "perfil desconocido: $PROFILE (usa: pi-bootstrap profiles)"
+  if have node; then
+    PROFILE_REQUIRES=$(node -e "const p=require('$SRC/config/profiles/$PROFILE.json'); process.stdout.write(p.requires.join(' '))")
+  fi
+  export PROFILE PROFILE_REQUIRES
+}
+
+ask_profile() {
+  [ -n "$PROFILE" ] && return 0
+  if [ ! -t 0 ]; then
+    die "falta --profile. Disponibles: $(ls "$SRC/config/profiles" | sed 's/\.json//' | tr '\n' ' ')"
+  fi
+  log ""
+  log "¿Qué perfil de modelos quieres?"
+  local ids="" f i=1
+  for f in "$SRC"/config/profiles/*.json; do
+    [ -f "$f" ] || continue
+    ids="$ids $(basename "$f" .json)"
+    printf '  %d) %s\n' "$i" "$(basename "$f" .json)" >&2
+    i=$((i + 1))
+  done
+  printf 'Número o id [hybrid-openai]: ' >&2
+  local answer=""; read -r answer || answer=""
+  case "$answer" in
+    "") PROFILE="hybrid-openai" ;;
+    *[!0-9]*) PROFILE="$answer" ;;
+    *) PROFILE=$(printf '%s\n' $ids | sed -n "${answer}p") ;;
+  esac
+  export PROFILE
+}
+
+cmd_install() {
+  preflight
+  ask_profile
+  load_profile_meta
+
+  step "plan"
+  log "  tiers:   $TIERS"
+  log "  perfil:  ${PROFILE:-<sin definir>}${PROFILE_REQUIRES:+ (proveedores: $PROFILE_REQUIRES)}"
+  log "  prefijo: $PREFIX"
+  log "  pasos:   preflight → binarios → gentle-ai → paquetes pi → config → perfil → auth → verify"
+
+  if [ "$DRY_RUN" = "1" ]; then
+    log ""
+    log "(--dry-run) nada modificado"
+    return 0
+  fi
+
+  install_tier_tools
+  load_profile_meta
+  install_provider_tools
+  setup_gentle_ai
+  install_pi_packages
+  apply_config
+  apply_profile
+  auth_gate
+  ensure_path
+  verify_all
+}
+
+case "$CMD" in
+  ""|install) cmd_install ;;
+  profiles) list_profiles ;;
+  profile)
+    load_profile_meta
+    step "aplicando perfil $PROFILE"
+    apply_profile
+    ;;
+  auth)
+    detect_platform
+    load_profile_meta
+    [ -n "$PROFILE_REQUIRES" ] || PROFILE_REQUIRES=$(node -e "const p=require('$SRC/config/profiles/'+require('fs').readdirSync('$SRC/config/profiles')[0]); process.stdout.write(p.requires.join(' '))" 2>/dev/null || true)
+    auth_gate
+    ;;
+  verify)
+    detect_platform
+    load_profile_meta
+    verify_all
+    ;;
+  doctor)
+    preflight
+    load_profile_meta
+    verify_all
+    ;;
+  init)
+    detect_platform
+    init_project "${1:-$PWD}"
+    ;;
+  upgrade)
+    step "upgrade (pineado)"
+    log "  1. editar manifest.json (versiones + sha256 nuevos)"
+    log "  2. node scripts/gen-pins.mjs"
+    log "  3. pi-bootstrap install --force"
+    log "  4. pi-bootstrap verify --strict"
+    warn "no implementado todavía: este comando sólo imprime el procedimiento"
+    ;;
+  export-config)
+    node "$SRC/scripts/export-config.mjs" ;;
+  *) usage; exit 2 ;;
+esac

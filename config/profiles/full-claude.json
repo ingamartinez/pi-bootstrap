@@ -1,0 +1,73 @@
+{
+  "schema": "pi-bootstrap.profile/1",
+  "id": "full-claude",
+  "label": "Todo Claude (vía Claude Code / claude-bridge)",
+  "requires": [
+    "claude"
+  ],
+  "independence": "same-family",
+  "roles": {
+    "orchestrator": {
+      "model": "claude-bridge/claude-sonnet-5-5",
+      "thinking": "high"
+    },
+    "gentle-ai-explore": {
+      "model": "claude-bridge/claude-haiku-5-5",
+      "thinking": "low"
+    },
+    "gentle-ai-worker": {
+      "model": "claude-bridge/claude-sonnet-5-5",
+      "thinking": "high"
+    },
+    "gentle-ai-verify": {
+      "model": "claude-bridge/claude-opus-5-5",
+      "thinking": "high"
+    },
+    "review-readability": {
+      "model": "claude-bridge/claude-haiku-5-5",
+      "thinking": "high"
+    },
+    "review-resilience": {
+      "model": "claude-bridge/claude-haiku-5-5",
+      "thinking": "high"
+    },
+    "review-reliability": {
+      "model": "claude-bridge/claude-haiku-5-5",
+      "thinking": "high"
+    },
+    "review-risk": {
+      "model": "claude-bridge/claude-opus-5-5",
+      "thinking": "high"
+    },
+    "review-refuter": {
+      "model": "claude-bridge/claude-opus-5-5",
+      "thinking": "high"
+    },
+    "review-validator": {
+      "model": "claude-bridge/claude-sonnet-5-5",
+      "thinking": "high"
+    },
+    "jd-judge-a": {
+      "model": "claude-bridge/claude-opus-5-5",
+      "thinking": "high"
+    },
+    "jd-judge-b": {
+      "model": "claude-bridge/claude-sonnet-5-5",
+      "thinking": "high"
+    },
+    "jd-fix-agent": {
+      "model": "claude-bridge/claude-sonnet-5-5",
+      "thinking": "high"
+    }
+  },
+  "settings": {
+    "defaultProvider": "claude-bridge",
+    "defaultModel": "claude-sonnet-5-5",
+    "defaultThinkingLevel": "high"
+  },
+  "webSearch": null,
+  "notes": [
+    "Requiere el binario `claude` instalado y logueado con plan Pro/Max.",
+    "Verifica con la misma familia que produce: no apto para gates críticos."
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "pi-bootstrap.profile/1",
+  "id": "full-deepseek",
+  "label": "Todo DeepSeek (onboarding barato)",
+  "requires": [
+    "deepseek"
+  ],
+  "independence": "same-family",
+  "roles": {
+    "orchestrator": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "gentle-ai-explore": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "low"
+    },
+    "gentle-ai-worker": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "gentle-ai-verify": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "review-readability": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-resilience": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-reliability": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-risk": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "review-refuter": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "review-validator": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "jd-judge-a": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "jd-judge-b": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "jd-fix-agent": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    }
+  },
+  "settings": {
+    "defaultProvider": "deepseek",
+    "defaultModel": "deepseek-v4-pro",
+    "defaultThinkingLevel": "high"
+  },
+  "webSearch": null,
+  "notes": [
+    "El perfil más barato; útil para probar el harness completo con una sola key.",
+    "Sin búsqueda web integrada (deepseek no expone modelo de búsqueda)."
+  ]
+}

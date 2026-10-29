@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "exposure": "direct",
+      "description": "Code graph queries over the repository: symbols, references, call paths."
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "exposure": "direct",
+      "description": "Up-to-date library documentation for the frameworks this project uses."
+    }
+  }
+}

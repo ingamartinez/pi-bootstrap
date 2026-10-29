@@ -1,0 +1,77 @@
+{
+  "schema": "pi-bootstrap.profile/1",
+  "id": "hybrid-openai",
+  "label": "Híbrido — DeepSeek para volumen, OpenAI para verificar",
+  "requires": [
+    "deepseek",
+    "openai"
+  ],
+  "independence": "cross-provider",
+  "roles": {
+    "orchestrator": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "gentle-ai-explore": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "low"
+    },
+    "gentle-ai-worker": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "gentle-ai-verify": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "review-readability": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-resilience": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-reliability": {
+      "model": "deepseek/deepseek-flash",
+      "thinking": "high"
+    },
+    "review-risk": {
+      "model": "openai/gpt-6.1-sol",
+      "thinking": "high"
+    },
+    "review-refuter": {
+      "model": "openai/gpt-6.1-sol",
+      "thinking": "high"
+    },
+    "review-validator": {
+      "model": "openai/gpt-6-sol",
+      "thinking": "high"
+    },
+    "jd-judge-a": {
+      "model": "openai/gpt-6.1-sol",
+      "thinking": "high"
+    },
+    "jd-judge-b": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    },
+    "jd-fix-agent": {
+      "model": "deepseek/deepseek-v4-pro",
+      "thinking": "high"
+    }
+  },
+  "settings": {
+    "defaultProvider": "deepseek",
+    "defaultModel": "deepseek-v4-pro",
+    "defaultThinkingLevel": "high"
+  },
+  "webSearch": {
+    "provider": "openai",
+    "model": "gpt-6-luna"
+  },
+  "notes": [
+    "DeepSeek necesita DEEPSEEK_API_KEY propia.",
+    "OpenAI se autentica con /login dentro de pi."
+  ]
+}

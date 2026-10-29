@@ -1,0 +1,203 @@
+{
+  "schema": "pi-bootstrap.manifest/1",
+  "updated": "2026-10-29",
+  "installPrefix": "~/.local",
+  "tiers": {
+    "base": [
+      "node",
+      "pi",
+      "gentle-ai"
+    ],
+    "tools": [
+      "engram",
+      "codegraph"
+    ],
+    "shell": [
+      "gentle-shell"
+    ],
+    "auth:claude": [
+      "claude-code"
+    ]
+  },
+  "tools": {
+    "node": {
+      "kind": "tarball",
+      "version": "24.21.0",
+      "requires": [],
+      "url": "https://nodejs.org/dist/v{version}/node-v{version}-{os}-{arch}.tar.gz",
+      "sha256": {
+        "darwin-arm64": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+        "darwin-x64": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
+        "linux-arm64": "724282c3b43aec998aa9527380465b45d229e021b58035f5f4f63095eabfe5d5",
+        "linux-x64": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff"
+      },
+      "dest": "~/.local/node",
+      "stripComponents": 1,
+      "exposes": [
+        "node",
+        "npm",
+        "npx"
+      ],
+      "verify": [
+        "node --version",
+        "npm --version"
+      ]
+    },
+    "pi": {
+      "kind": "npm-global",
+      "package": "@earendil-works/pi-coding-agent",
+      "version": "1.4.0",
+      "requires": [
+        "node"
+      ],
+      "exposes": [
+        "pi"
+      ],
+      "verify": [
+        "pi --version"
+      ]
+    },
+    "gentle-ai": {
+      "kind": "tarball",
+      "version": "4.3.1",
+      "requires": [],
+      "url": "https://github.com/Gentleman-Programming/gentle-ai/releases/download/v{version}/gentle-ai_{version}_{os}_{arch}.tar.gz",
+      "sha256": {
+        "darwin-arm64": "13e8828447f9081465ee0c35a61b24fb49296d51a310c6999227e2aed178956b",
+        "darwin-x64": "6cf57fee0574daef2abed07f54a355fec3b93ac8f01733dc6c4d3674f1746112",
+        "linux-arm64": "99e7d313a2ff85eaf23a6415e9b3aae67bf74c2fa169b21b93070ada7613f6a0",
+        "linux-x64": "04ec685c56b42c29dff6db10fc7dc2c730217dc9c96736e53ad2acf3226dafb7"
+      },
+      "artifact": "gentle-ai",
+      "dest": "~/.local/bin",
+      "verify": [
+        "gentle-ai --version"
+      ]
+    },
+    "engram": {
+      "kind": "tarball",
+      "version": "3.6.0",
+      "requires": [],
+      "url": "https://github.com/Gentleman-Programming/engram/releases/download/v{version}/engram_{version}_{os}_{arch}.tar.gz",
+      "sha256": {
+        "darwin-arm64": "b1e565ad2a2f01beca936030d65ab79075808ecc81e1e16447040e32fa2c0753",
+        "darwin-x64": "41d74d7d61bd8a8929da85a3ed75dbcb16c18f30efff4675ad2f832c8f89898e",
+        "linux-arm64": "00a2d7645aa428e56c32c18b8de8bfa90d4c6e0f68c4d47bc82e3d6e3e77879d",
+        "linux-x64": "945fb471188826c251160947f8dda9fe148ba0dd095fa3453174fe7ab5c6479e"
+      },
+      "artifact": "engram",
+      "dest": "~/.local/bin",
+      "verify": [
+        "engram --version"
+      ]
+    },
+    "codegraph": {
+      "kind": "npm-global",
+      "package": "@colbymchenry/codegraph",
+      "version": "1.6.0",
+      "requires": [
+        "node"
+      ],
+      "exposes": [
+        "codegraph"
+      ],
+      "verify": [
+        "codegraph --version"
+      ]
+    },
+    "claude-code": {
+      "kind": "npm-global",
+      "package": "@anthropic-ai/claude-code",
+      "version": "2.1.312",
+      "requires": [
+        "node"
+      ],
+      "exposes": [
+        "claude"
+      ],
+      "verify": [
+        "claude --version"
+      ],
+      "tier": "auth:claude"
+    },
+    "gentle-shell": {
+      "kind": "official-wizard",
+      "version": "4.5.1",
+      "requires": [
+        "node",
+        "pi"
+      ],
+      "reason": "El instalador oficial es un wizard de navegador (loopback + consent:true). No hay CLI headless.",
+      "verify": [
+        "gentle-shell --version"
+      ],
+      "tier": "shell"
+    }
+  },
+  "pi": {
+    "packages": [
+      "npm:gentle-pi@4.5.1",
+      "npm:gentle-engram@0.4.2",
+      "npm:pi-claude-bridge@0.9.3",
+      "npm:pi-web-access@0.46.0",
+      "npm:@aliou/pi-processes@0.13.3",
+      "npm:pi-btw@0.8.0",
+      "npm:pi-image-tools@1.4.0",
+      "git:https://github.com/hasit/pi-community-themes@a6d7731fd46db4721654bf45161fb2cd1e8cbc1e"
+    ],
+    "optionalPackages": [
+      "npm:pi-browser-harness@0.13.0"
+    ]
+  },
+  "agents": {
+    "gentle-ai-install": {
+      "command": "gentle-ai install --agent pi --scope global",
+      "note": "Correr ANTES de añadir agentes propios: setup captura los .md presentes en disco."
+    }
+  },
+  "config": [
+    {
+      "src": "config/pi/settings.json",
+      "dest": "~/.pi/agent/settings.json",
+      "merge": "json-shallow"
+    },
+    {
+      "src": "config/pi/mcp.json",
+      "dest": "~/.pi/agent/mcp.json",
+      "merge": "json-shallow"
+    },
+    {
+      "src": "config/pi/keybindings.json",
+      "dest": "~/.pi/agent/keybindings.json",
+      "merge": "json-shallow"
+    },
+    {
+      "src": "config/pi/agents",
+      "dest": "~/.pi/agent/agents",
+      "merge": "copy-missing"
+    },
+    {
+      "src": "config/gentle-ai/channel.json",
+      "dest": "~/.pi/gentle-ai/channel.json",
+      "merge": "copy"
+    },
+    {
+      "src": "config/gentle-ai/background-subagents.json",
+      "dest": "~/.pi/gentle-ai/background-subagents.json",
+      "merge": "copy"
+    }
+  ],
+  "derivedByProfile": [
+    "~/.pi/agent/subagents.json",
+    "~/.pi/gentle-ai/profiles.json",
+    "~/.pi/agent/web-search.json"
+  ],
+  "neverCopy": [
+    "~/.pi/agent/auth.json",
+    "~/.pi/agent/deviceId",
+    "~/.pi/agent/browser-harness.json",
+    "~/.pi/agent/trust.json",
+    "~/.pi/agent/models.json (llm-gateway/baseUrl/apiKey son del autor)",
+    "~/.engram/engram.db"
+  ]
+}

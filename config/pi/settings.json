@@ -1,0 +1,24 @@
+{
+  "packages": [
+    "npm:gentle-pi@4.5.1",
+    "npm:gentle-engram@0.4.2",
+    "npm:pi-claude-bridge@0.9.3",
+    "npm:pi-web-access@0.46.0",
+    "npm:@aliou/pi-processes@0.13.3",
+    "npm:pi-btw@0.8.0",
+    "npm:pi-image-tools@1.4.0",
+    "git:https://github.com/hasit/pi-community-themes@a6d7731fd46db4721654bf45161fb2cd1e8cbc1e"
+  ],
+  "defaultProvider": "openai",
+  "defaultModel": "gpt-6.1-sol",
+  "defaultThinkingLevel": "high",
+  "hideThinkingBlock": true,
+  "terminal": {
+    "hyperlinks": true
+  },
+  "theme": "catppuccin-mocha",
+  "tuiMode": "fullscreen",
+  "extensions": [
+    "-builtin:codemode"
+  ]
+}
