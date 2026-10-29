@@ -92,10 +92,24 @@ manifest_get() {
 # ¿podemos preguntar? Sólo con stdin y stdout de terminal.
 # PI_BOOTSTRAP_ASSUME_TTY=1 fuerza "sí hay terminal" para poder probar los prompts con respuestas
 # pipeadas (hook de test; no usar en producción).
+# Con `curl ... | sh` stdin es el script: se pregunta igual si hay terminal de control (/dev/tty).
+tty_available() { ( : < /dev/tty ) 2>/dev/null; }
+
 interactive() {
   [ "${ASSUME_YES:-0}" = "1" ] && return 1
   [ "${PI_BOOTSTRAP_ASSUME_TTY:-0}" = "1" ] && return 0
-  [ -t 0 ] && [ -t 1 ]
+  [ -t 1 ] || return 1
+  [ -t 0 ] && return 0
+  tty_available
+}
+
+prompt_read() {
+  # prompt_read <nombre-de-variable>
+  # Hook de test: con ASSUME_TTY las respuestas vienen pipeadas por stdin (no hay /dev/tty).
+  if [ "${PI_BOOTSTRAP_ASSUME_TTY:-0}" = "1" ]; then read -r "$1" || return 1; return 0; fi
+  if [ -t 0 ]; then read -r "$1" || return 1
+  elif tty_available; then read -r "$1" < /dev/tty || return 1
+  else return 1; fi
 }
 
 confirm() {
@@ -105,7 +119,7 @@ confirm() {
   interactive || return 1
   printf '%s [s/N] ' "$1" >&2
   local reply=""
-  read -r reply || reply=""
+  prompt_read reply || reply=""
   case "$reply" in s|S|si|sí|y|Y|yes) return 0 ;; *) return 1 ;; esac
 }
 
@@ -116,7 +130,7 @@ ask_yes_no() {
   interactive || { [ "$def" = "s" ]; return; }
   if [ "$def" = "s" ]; then prompt="$1 [S/n] "; else prompt="$1 [s/N] "; fi
   printf '%s' "$prompt" >&2
-  local reply=""; read -r reply || reply=""
+  local reply=""; prompt_read reply || reply=""
   [ -z "$reply" ] && { [ "$def" = "s" ]; return; }
   case "$reply" in s|S|si|sí|y|Y|yes) return 0 ;; *) return 1 ;; esac
 }

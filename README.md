@@ -8,16 +8,23 @@ escriba `pi` dentro de cualquier repo y empiece a trabajar.
 ### 1. Modo interactivo (recomendado la primera vez)
 
 ```bash
-git clone https://github.com/ingamartinez/pi-bootstrap && cd pi-bootstrap
-./bootstrap.sh
+curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.9/bootstrap.sh | sh
 ```
 
 Pregunta lo que no puede adivinar: perfil de modelos, si quieres el tier `shell`, si conectas
 credenciales ahora o después, y **confirma antes de escribir nada**. El plan que imprime después
 refleja tus respuestas.
 
-> El modo interactivo necesita una terminal. Por `curl | sh` no puede preguntar —stdin es el propio
-> script— y el instalador lo dice en vez de asumir respuestas.
+Funciona porque `bootstrap.sh`, al detectar que viene por una tubería (stdin es el script), reabre
+`/dev/tty` como entrada del instalador. Si prefieres no depender de eso, las dos alternativas son
+igual de válidas:
+
+```bash
+sh -c "$(curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.9/bootstrap.sh)"
+git clone https://github.com/ingamartinez/pi-bootstrap && cd pi-bootstrap && ./bootstrap.sh
+```
+
+Sin terminal de control (CI, contenedor) no hay preguntas posibles: ahí va el bloque 2.
 
 ### 2. One-shot (CI, dotfiles, máquinas remotas)
 

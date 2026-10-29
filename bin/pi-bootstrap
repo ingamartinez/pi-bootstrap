@@ -122,7 +122,7 @@ ask_profile() {
     i=$((i + 1))
   done
   printf 'Número o id [hybrid-openai]: ' >&2
-  local answer=""; read -r answer || answer=""
+  local answer=""; prompt_read answer || answer=""
   case "$answer" in
     "") PROFILE="hybrid-openai" ;;
     *[!0-9]*) PROFILE="$answer" ;;

@@ -322,7 +322,7 @@ auth_gate() {
           continue
         fi
         printf 'Pega tu DEEPSEEK_API_KEY (Enter para saltar): ' >&2
-        local key=""; read -r key || key=""
+        local key=""; prompt_read key || key=""
         if [ -n "$key" ]; then
           node "$SRC/scripts/set-api-key.mjs" deepseek "$key"
           ok "deepseek listo"

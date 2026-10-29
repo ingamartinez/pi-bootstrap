@@ -68,6 +68,15 @@ grep -q "auth:    después" /tmp/interactive.log \
   && pass "la respuesta de auth se aplicó" \
   || fail "la respuesta de auth no se aplicó"
 
+say "camino por pipe (curl|sh): los flags sobreviven al exec"
+# En el contenedor no hay /dev/tty, así que aquí se cubre el reenvío de argumentos y el no-TTY.
+# El caso interactivo por tubería se prueba a mano con un pty (ver README).
+cat "$SRC/bootstrap.sh" | PI_BOOTSTRAP_SRC="$SRC" sh -s -- --profile "$PROFILE" --yes --dry-run > /tmp/piped.log 2>&1
+assert_eq "pipe exit code" "$?" "0"
+grep -q "(--dry-run) nada modificado" /tmp/piped.log \
+  && pass "los flags llegaron a través del pipe" \
+  || fail "los flags se perdieron en el camino por pipe"
+
 say "reset --config y recuperación"
 "$SRC/bin/pi-bootstrap" reset --config --yes > /tmp/reset.log 2>&1
 RC_R=$?
