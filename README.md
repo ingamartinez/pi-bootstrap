@@ -3,21 +3,38 @@
 Deja **Pi + Gentle AI + un perfil de modelos** listos en macOS o Linux, sin sudo, para que un dev
 escriba `pi` dentro de cualquier repo y empiece a trabajar.
 
-```bash
-curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.7/bootstrap.sh \
-  | sh -s -- --profile hybrid-openai --yes
-```
+## Instalar
 
-Desde el checkout (mismo resultado, para desarrollar el instalador):
+### 1. Modo interactivo (recomendado la primera vez)
 
 ```bash
 git clone https://github.com/ingamartinez/pi-bootstrap && cd pi-bootstrap
+./bootstrap.sh
+```
+
+Pregunta lo que no puede adivinar: perfil de modelos, si quieres el tier `shell`, si conectas
+credenciales ahora o después, y **confirma antes de escribir nada**. El plan que imprime después
+refleja tus respuestas.
+
+> El modo interactivo necesita una terminal. Por `curl | sh` no puede preguntar —stdin es el propio
+> script— y el instalador lo dice en vez de asumir respuestas.
+
+### 2. One-shot (CI, dotfiles, máquinas remotas)
+
+```bash
+curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.1.9/bootstrap.sh \
+  | sh -s -- --profile hybrid-openai --yes
+```
+
+### 3. Desde el checkout, sin preguntas
+
+```bash
 ./bootstrap.sh --profile hybrid-openai --yes
 ```
 
 ## Estado
 
-Release actual **v0.1.7**, CI verde en `main` y en cada tag.
+Release actual **v0.1.9**, CI verde en `main` y en cada tag.
 
 | Pieza | Estado |
 |---|---|

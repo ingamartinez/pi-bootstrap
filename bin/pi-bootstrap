@@ -104,9 +104,12 @@ load_profile_meta() {
 ask_profile() {
   [ -n "$PROFILE" ] && return 0
   local avail; avail=$(ls "$SRC/config/profiles" | sed 's/\.json//' | tr '\n' ' ')
-  # Sin terminal no se inventa una elección: se pide explícita.
+  # Sin terminal no se inventa una elección: se pide explícita, y se explica por qué.
   if ! interactive; then
-    die "falta --profile (disponibles: $avail)"
+    die "falta --profile. Disponibles: $avail
+  · modo interactivo: clona el repo y corre ./bootstrap.sh  (por 'curl | sh' no se puede preguntar:
+    stdin es el propio script)
+  · one-shot:         --profile <id> --yes"
   fi
   log ""
   log "¿Qué perfil de modelos quieres?"
