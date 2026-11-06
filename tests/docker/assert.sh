@@ -154,4 +154,65 @@ else
   pass "sin espera muerta contra claude-bridge"
 fi
 
+# Regresión: el login de proveedores no puede volver a abrir la TUI (había que escribir /login
+# y salir a mano). openai se conduce con scripts/pi-login.mjs; claude con `claude auth login`.
+if grep -qE '^\s+pi \|\| true' "$SRC/lib/steps.sh"; then
+  fail "el login de openai volvió a abrir la TUI de pi"
+else
+  pass "openai se autentica sin TUI (pi-login.mjs)"
+fi
+if grep -q 'claude auth login' "$SRC/lib/steps.sh"; then
+  pass "claude se autentica con 'claude auth login' (sin TUI)"
+else
+  fail "claude volvió a abrirse como TUI completa"
+fi
+[ -f "$SRC/scripts/pi-login.mjs" ] \
+  && pass "scripts/pi-login.mjs presente" \
+  || fail "falta scripts/pi-login.mjs"
+
+# Regresión: leer el terminal con fs (createReadStream/read) sobre el fd bloquea el event loop en
+# Linux: los timers dejan de disparar y el proceso queda vivo hasta que alguien pulsa Enter.
+# La lectura va por tty.ReadStream, y la salida es process.exit inmediato tras writeSync.
+if grep -n 'from "node:fs"' "$SRC/scripts/pi-login.mjs" | grep -q 'createReadStream'; then
+  fail "pi-login.mjs importa createReadStream de fs (congela el loop en Linux)"
+else
+  pass "pi-login.mjs lee el terminal con tty.ReadStream"
+fi
+if grep -q 'process.exit(await main())' "$SRC/scripts/pi-login.mjs"; then
+  pass "pi-login.mjs sale sin depender de timers"
+else
+  fail "pi-login.mjs volvió a salir por timer/flush"
+fi
+
+# Regresión: un install verde puede dejar `pi: command not found`, porque el PATH del proceso no
+# vuelve al shell del usuario. El instalador tiene que decirlo (y sólo cuando hace falta).
+probe_path_hint() {
+  PI_BOOTSTRAP_PREFIX="/opt/fake" INITIAL_PATH="$1" PATH_RC_FILES="/home/dev/.bashrc" \
+    bash -c ". '$SRC/lib/common.sh'; path_activation_hint" 2>&1
+}
+probe_path_hint "/usr/bin:/bin" | grep -q 'export PATH="/opt/fake/bin' \
+  && pass "avisa cómo activar el PATH en la sesión actual" \
+  || fail "no avisa del PATH tras instalar"
+if probe_path_hint "/opt/fake/bin:/usr/bin" | grep -q 'activar el PATH'; then
+  fail "avisa del PATH incluso cuando ya estaba activo"
+else
+  pass "no molesta cuando el PATH ya estaba bien"
+fi
+
+# install_node: el pin es un MÍNIMO. Si el node presente ya lo cumple, no se descarga otro
+# (evita pisar el node del sistema con una descarga innecesaria).
+if bash -c ". '$SRC/lib/common.sh'; . '$SRC/lib/pins.sh'; . '$SRC/lib/steps.sh'; NODE_VERSION=20.0.0; install_node" 2>&1 | grep -q "se reutiliza"; then
+  pass "install_node reutiliza el node presente (no descarga)"
+else
+  fail "install_node descarga aunque el node presente ya cumple el pin"
+fi
+
+# Regresión: `upgrade --apply|--rollback` reinstala el perfil y llegaba a forzar --skip-auth, así que
+# el paso de auth se omitía en silencio. auth_gate ya comprueba antes de conectar: no hace falta.
+if grep -q -- '\"--skip-auth\"' "$SRC/scripts/upgrade.mjs"; then
+  fail "upgrade vuelve a omitir la autenticación con --skip-auth"
+else
+  pass "upgrade no omite la autenticación"
+fi
+
 exit $([ "$FAILS" -eq 0 ] && echo 0 || echo 1)
