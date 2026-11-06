@@ -56,10 +56,12 @@ verify_all() {
   if [ "${agents_n:-0}" -ge 10 ]; then vpass "agentes: $agents_n .md"; else vfail "agentes: $agents_n (esperados 10)"; fi
 
   if [ -n "$PROFILE" ]; then
-    if node "$SRC/scripts/apply-profile.mjs" --check "$PROFILE" >/dev/null 2>&1; then
-      vpass "perfil $PROFILE: runtime en sync (subagents + profiles + web-search)"
+    prof_out=$(node "$SRC/scripts/apply-profile.mjs" --check "$PROFILE" 2>&1)
+    if [ $? -eq 0 ]; then
+      vpass "perfil $PROFILE: runtime en sync (subagents + profiles + web-search + settings + agentes)"
     else
-      vfail "perfil $PROFILE: drift entre subagents.json y profiles.json (corre: pi-bootstrap profile $PROFILE)"
+      prof_why=$(printf '%s\n' "$prof_out" | sed -n 's/^drift: //p' | head -1)
+      vfail "perfil $PROFILE: ${prof_why:-drift} (corre: pi-bootstrap profile $PROFILE)"
     fi
   else
     vwarn "sin --profile: no se verifica coherencia de perfiles"

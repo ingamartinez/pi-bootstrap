@@ -59,8 +59,12 @@ else
 fi
 
 say "modo interactivo (respuestas pipeadas, hook de test)"
-printf 's\nn\n' | PI_BOOTSTRAP_ASSUME_TTY=1 "$SRC/bootstrap.sh" --profile "$PROFILE" --dry-run > /tmp/interactive.log 2>&1
+# Respuestas en orden: ruta de DeepSeek (1 = API directa), tier shell (s), auth ahora (n).
+printf '1\ns\nn\n' | PI_BOOTSTRAP_ASSUME_TTY=1 "$SRC/bootstrap.sh" --profile "$PROFILE" --dry-run > /tmp/interactive.log 2>&1
 assert_eq "interactivo exit code" "$?" "0"
+grep -q "deepseek: deepseek" /tmp/interactive.log \
+  && pass "la ruta de DeepSeek se aplicó" \
+  || fail "la ruta de DeepSeek no se aplicó"
 grep -q "tiers:   base,tools,shell" /tmp/interactive.log \
   && pass "la respuesta al tier shell se aplicó" \
   || fail "la respuesta al tier shell no se aplicó"

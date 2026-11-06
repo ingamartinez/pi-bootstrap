@@ -1,8 +1,6 @@
 ---
 name: gentle-ai-explore
 description: Read-only local and web exploration on its configured economical model.
-model: opencode-go/deepseek-v4.1-flash
-thinking: low
 tools:
   - read
   - grep

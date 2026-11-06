@@ -41,6 +41,7 @@ const state = {
   at: new Date().toISOString(),
   tiers,
   profile,
+  deepseekVia: process.env.PI_BOOTSTRAP_DEEPSEEK_VIA || "deepseek",
   source: process.env.PI_BOOTSTRAP_SOURCE || "checkout",
   tools,
   packages: manifest.pi.packages,

@@ -1,7 +1,7 @@
 {
   "schema": "pi-bootstrap.profile/1",
   "id": "hybrid-claude",
-  "label": "Híbrido — DeepSeek para volumen, Claude para verificar",
+  "label": "DeepSeek produce · Claude verifica",
   "requires": [
     "deepseek",
     "claude"

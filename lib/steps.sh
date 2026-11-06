@@ -290,7 +290,22 @@ install_gentle_shell() {
 
 auth_ready() {
   # auth_ready <provider>
-  pi auth check --provider "$1" --no-refresh --json >/dev/null 2>&1
+  # claude no vive en pi/auth.json: Claude Code guarda lo suyo en ~/.claude/.credentials.json.
+  # `pi auth check --provider claude-bridge` sólo responde si la extensión del bridge está
+  # cargada en esa corrida, y al salir del CLI no lo está → siempre daba not_ready y el flujo
+  # se quedaba esperando 90s con las flechas imprimiéndose crudas (^[[A^[[B).
+  case "$1" in
+    claude|claude-bridge) claude_credentials ;;
+    *) pi auth check --provider "$1" --no-refresh --json >/dev/null 2>&1 ;;
+  esac
+}
+
+claude_credentials() {
+  # Fichero de credenciales de Claude Code (respeta CLAUDE_CONFIG_DIR).
+  # grep -E: la alternación \| de BRE no es portable (BSD/macOS la trata distinto).
+  local creds="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.credentials.json"
+  [ -s "$creds" ] || return 1
+  grep -qE 'accessToken|refreshToken|claudeAiOauth' "$creds" 2>/dev/null
 }
 
 wait_for_auth() {
@@ -330,23 +345,45 @@ auth_gate() {
           warn "deepseek sin credenciales — 'pi-bootstrap auth' cuando la tengas"
         fi
         ;;
+      opencode-go)
+        # Mismo mecanismo que deepseek (key en auth.json), pero en el catálogo de opencode-go.
+        if auth_ready opencode-go; then ok "opencode-go listo"; continue; fi
+        if [ -n "${OPENCODE_API_KEY:-}" ]; then
+          node "$SRC/scripts/set-api-key.mjs" opencode-go "$OPENCODE_API_KEY"
+          ok "opencode-go: key tomada de OPENCODE_API_KEY"
+          continue
+        fi
+        printf 'Pega tu OPENCODE_API_KEY (Enter para saltar): ' >&2
+        local okey=""; prompt_read okey || okey=""
+        if [ -n "$okey" ]; then
+          node "$SRC/scripts/set-api-key.mjs" opencode-go "$okey"
+          ok "opencode-go listo"
+        else
+          warn "opencode-go sin credenciales — 'pi-bootstrap auth' cuando la tengas"
+        fi
+        ;;
       openai)
         if auth_ready openai; then ok "openai listo"; continue; fi
         log "  Se abrirá pi. Dentro escribe: /login  y elige OpenAI."
         if [ -t 0 ] && [ -t 1 ]; then
           pi || true
+          stty sane 2>/dev/null || true
           if wait_for_auth openai 60; then ok "openai listo"; else warn "openai no quedó autenticado"; fi
         else
           warn "sin TTY: corre 'pi' y luego '/login' (OpenAI)"
         fi
         ;;
       claude)
-        if auth_ready claude-bridge; then ok "claude listo"; continue; fi
+        if auth_ready claude; then ok "claude listo"; continue; fi
         have claude || die "falta el binario claude (instala con --profile ... y tier auth:claude)"
         log "  Se abrirá Claude Code. Escribe /login y elige tu cuenta (plan Pro/Max)."
         if [ -t 0 ] && [ -t 1 ]; then
           claude || true
-          if wait_for_auth claude-bridge 90; then ok "claude listo"; else warn "claude no quedó autenticado"; fi
+          # La TUI deja el terminal en modo crudo: sin esto, las teclas salen como ^[[A al volver.
+          stty sane 2>/dev/null || true
+          if auth_ready claude; then ok "claude listo"; continue; fi
+          log "  esperando ~/.claude/.credentials.json (30s) — Ctrl-C para saltar"
+          if wait_for_auth claude 30; then ok "claude listo"; else warn "claude no quedó autenticado"; fi
         else
           warn "sin TTY: corre 'claude' y luego '/login'"
         fi

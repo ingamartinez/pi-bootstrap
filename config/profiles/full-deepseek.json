@@ -1,7 +1,7 @@
 {
   "schema": "pi-bootstrap.profile/1",
   "id": "full-deepseek",
-  "label": "Todo DeepSeek (onboarding barato)",
+  "label": "Todo DeepSeek (misma familia, barato)",
   "requires": [
     "deepseek"
   ],

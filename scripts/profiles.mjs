@@ -18,6 +18,65 @@ const OA_ASTRA = "openai/gpt-6-astra";
 const OA_MINI = "openai/gpt-5.4-mini";
 const OA_LUNA = "openai/gpt-6-luna";
 
+// Eje DeepSeek: por dónde se enrutan esos roles. La matriz no se duplica: se reescribe el proveedor.
+//   deepseek    → API directa (DEEPSEEK_API_KEY)
+//   opencode-go → catálogo de opencode-go (OPENCODE_API_KEY)
+//   none        → ningún perfil que requiera DeepSeek queda disponible
+// Los ids NO son isomorfos: el flash directo es `deepseek-flash`, el de opencode-go es `deepseek-v4.1-flash`.
+export const DEEPSEEK_ROUTES = ["deepseek", "opencode-go", "none"];
+
+const DEEPSEEK_MODEL_IDS = {
+  deepseek: { pro: "deepseek/deepseek-v4-pro", flash: "deepseek/deepseek-flash" },
+  "opencode-go": { pro: "opencode-go/deepseek-v4-pro", flash: "opencode-go/deepseek-v4.1-flash" },
+};
+
+// Modelo directo → qué variante del catálogo de opencode-go le corresponde.
+const DEEPSEEK_MODEL_KIND = {
+  [DEEPSEEK_MODEL_IDS.deepseek.pro]: "pro",
+  [DEEPSEEK_MODEL_IDS.deepseek.flash]: "flash",
+};
+
+export function routeDeepseek(route = "deepseek") {
+  if (!DEEPSEEK_ROUTES.includes(route)) {
+    throw new Error(`ruta de DeepSeek desconocida: ${route} (usa: ${DEEPSEEK_ROUTES.join(", ")})`);
+  }
+  return route;
+}
+
+/** ¿Este perfil se puede montar con esta ruta? */
+export function profileFitsRoute(profile, route = "deepseek") {
+  routeDeepseek(route);
+  if (route !== "none") return true;
+  return !profile.requires.includes("deepseek");
+}
+
+/** Perfiles ofrecibles para una ruta, en el orden de la matriz. */
+export function profilesForRoute(route = "deepseek") {
+  return PROFILES.filter((p) => profileFitsRoute(p, route));
+}
+
+/**
+ * Devuelve el perfil con sus modelos DeepSeek enrutados y su `requires` ajustado.
+ * `deepseek` es la ruta por defecto: sin perfil enrutado el resultado es el perfil tal cual.
+ */
+export function profileForRoute(profile, route = "deepseek") {
+  routeDeepseek(route);
+  if (!profileFitsRoute(profile, route)) {
+    throw new Error(`el perfil ${profile.id} requiere DeepSeek y la ruta elegida es 'none'`);
+  }
+  if (route === "deepseek" || !profile.requires.includes("deepseek")) return profile;
+
+  const ids = DEEPSEEK_MODEL_IDS[route];
+  const roles = Object.fromEntries(
+    Object.entries(profile.roles).map(([name, role]) => {
+      const kind = DEEPSEEK_MODEL_KIND[role.model];
+      return [name, kind ? { ...role, model: ids[kind] } : role];
+    }),
+  );
+  const requires = profile.requires.map((p) => (p === "deepseek" ? route : p));
+  return { ...profile, roles, requires };
+}
+
 /** Los 13 roles del harness. `orchestrator` no tiene .md; refuter/validator no van en subagents.json. */
 export const ROLES = [
   "orchestrator",
@@ -63,7 +122,7 @@ function tiers(volume, mid, top) {
 export const PROFILES = [
   {
     id: "hybrid-claude",
-    label: "Híbrido — DeepSeek para volumen, Claude para verificar",
+    label: "DeepSeek produce · Claude verifica",
     requires: ["deepseek", "claude"],
     independence: "cross-provider",
     roles: {
@@ -82,7 +141,7 @@ export const PROFILES = [
   },
   {
     id: "hybrid-openai",
-    label: "Híbrido — DeepSeek para volumen, OpenAI para verificar",
+    label: "DeepSeek produce · OpenAI verifica",
     requires: ["deepseek", "openai"],
     independence: "cross-provider",
     roles: {
@@ -96,8 +155,65 @@ export const PROFILES = [
     notes: ["DeepSeek necesita DEEPSEEK_API_KEY propia.", "OpenAI se autentica con /login dentro de pi."],
   },
   {
+    // "híbrido" acá significa: quien produce no es quien verifica, y son familias distintas.
+    // El nombre se lee `<productor>-<verificador>`.
+    id: "claude-produces-openai-verifies",
+    label: "Claude produce · OpenAI verifica",
+    requires: ["claude", "openai"],
+    independence: "cross-provider",
+    roles: {
+      ...tiers(CLAUDE_HAIKU, CLAUDE_SONNET, OA_SOL),
+      "review-validator": role(OA_SOL6),
+      "jd-judge-b": role(CLAUDE_OPUS),
+    },
+    settings: { defaultProvider: "claude-bridge", defaultModel: "claude-sonnet-5-5", defaultThinkingLevel: "high" },
+    webSearch: { provider: "openai", model: "gpt-6-luna" },
+    notes: [
+      "Requiere el binario `claude` logueado (plan Pro/Max) y OpenAI con /login en pi.",
+      "Produce con Claude y verifica con OpenAI: el gate de revisión no comparte familia.",
+    ],
+  },
+  {
+    id: "openai-produces-claude-verifies",
+    label: "OpenAI produce · Claude verifica",
+    requires: ["claude", "openai"],
+    independence: "cross-provider",
+    roles: {
+      ...tiers(OA_MINI, OA_SOL6, CLAUDE_OPUS),
+      "gentle-ai-verify": role(CLAUDE_SONNET),
+      "review-validator": role(CLAUDE_SONNET),
+      "jd-judge-b": role(OA_SOL),
+      "jd-fix-agent": role(OA_LUNA),
+    },
+    settings: { defaultProvider: "openai", defaultModel: "gpt-6.1-sol", defaultThinkingLevel: "high" },
+    webSearch: { provider: "openai", model: "gpt-6-luna" },
+    notes: [
+      "Espejo del anterior: mismo par de proveedores, roles invertidos.",
+      "OpenAI hace volumen y Claude aporta la segunda opinión (riesgo, jueces).",
+    ],
+  },
+  {
+    id: "full-deepseek-claude-openai",
+    label: "DeepSeek volumen · Claude verifica · OpenAI riesgo/jueces",
+    requires: ["deepseek", "claude", "openai"],
+    independence: "cross-provider",
+    roles: {
+      ...tiers(DEEPSEEK_FLASH, DEEPSEEK_PRO, OA_SOL),
+      "gentle-ai-worker": role(DEEPSEEK_FLASH),
+      "gentle-ai-verify": role(CLAUDE_SONNET),
+      "review-validator": role(CLAUDE_SONNET),
+      "jd-judge-b": role(CLAUDE_OPUS),
+    },
+    settings: { defaultProvider: "deepseek", defaultModel: "deepseek-v4-pro", defaultThinkingLevel: "high" },
+    webSearch: { provider: "openai", model: "gpt-6-luna" },
+    notes: [
+      "Los tres proveedores: DeepSeek para volumen, Claude para verificar, OpenAI para riesgo y jueces.",
+      "Aunque se llame 'full', es cross-provider: por eso sirve para gates críticos.",
+    ],
+  },
+  {
     id: "full-claude",
-    label: "Todo Claude (vía Claude Code / claude-bridge)",
+    label: "Todo Claude (misma familia)",
     requires: ["claude"],
     independence: "same-family",
     roles: {
@@ -114,7 +230,7 @@ export const PROFILES = [
   },
   {
     id: "full-openai",
-    label: "Todo OpenAI",
+    label: "Todo OpenAI (misma familia)",
     requires: ["openai"],
     independence: "same-family",
     roles: {
@@ -131,7 +247,7 @@ export const PROFILES = [
   },
   {
     id: "full-deepseek",
-    label: "Todo DeepSeek (onboarding barato)",
+    label: "Todo DeepSeek (misma familia, barato)",
     requires: ["deepseek"],
     independence: "same-family",
     roles: {

@@ -112,6 +112,23 @@ prompt_read() {
   else return 1; fi
 }
 
+# Lectura de perfiles SIN node: se pregunta el perfil antes de instalar nada, y en una
+# máquina limpia todavía no hay node. Un `node -e` aquí dejaba el menú sin etiquetas.
+profile_field() {
+  # profile_field <archivo.json> <clave escalar>
+  sed -n "s/^[[:space:]]*\"$2\": \"\(.*\)\",*$/\1/p" "$1" | head -1
+}
+
+profile_list_field() {
+  # profile_list_field <archivo.json> <clave array>  → valores separados por ", "
+  sed -n "/^[[:space:]]*\"$2\": \[/,/\]/p" "$1" \
+    | sed '1d;$d' \
+    | sed 's/[",]//g; s/^[[:space:]]*//; s/[[:space:]]*$//' \
+    | grep -v '^$' \
+    | tr '\n' ' ' \
+    | sed 's/ *$//; s/ /,/g; s/,/, /g'
+}
+
 confirm() {
   # confirm <pregunta>: 0 = sí, 1 = no.
   # --yes ⇒ sí sin preguntar. Sin TTY y sin --yes ⇒ NO (nunca se asume un sí).

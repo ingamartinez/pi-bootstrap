@@ -1,8 +1,6 @@
 ---
 name: review-reliability
 description: R3 Reliability reviewer — behavior-first tests, coverage value, edge cases, determinism, contracts, and regressions.
-model: opencode-go/deepseek-v4.1-flash
-thinking: high
 tools:
   - "*": false
   - read

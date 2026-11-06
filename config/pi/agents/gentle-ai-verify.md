@@ -1,8 +1,6 @@
 ---
 name: gentle-ai-verify
 description: Read-only technical verification for generic ODD work.
-model: claude-bridge/claude-sonnet-5-5
-thinking: high
 tools:
   - read
   - grep

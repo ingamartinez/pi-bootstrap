@@ -28,6 +28,33 @@ pi-bootstrap auth          # la escribe en ~/.pi/agent/auth.json (chmod 600)
 Es el único proveedor que se puede dejar listo sin intervención. El perfil `full-deepseek`
 existe justamente para eso: probar el harness completo con una sola key.
 
+## DeepSeek vía opencode-go (alternativa al API directo)
+
+Si prefieres que esos mismos roles corran por el catálogo de `opencode-go` en vez de la API directa
+de DeepSeek, la ruta cambia y la credencial también:
+
+```bash
+export OPENCODE_API_KEY=...
+pi-bootstrap install --profile hybrid-openai --deepseek-via opencode-go --yes
+```
+
+Qué cambia y qué no:
+
+| | `--deepseek-via deepseek` (default) | `--deepseek-via opencode-go` |
+|---|---|---|
+| Credencial | `DEEPSEEK_API_KEY` | `OPENCODE_API_KEY` |
+| Modelo pro | `deepseek/deepseek-v4-pro` | `opencode-go/deepseek-v4-pro` |
+| Modelo flash | `deepseek/deepseek-flash` | `opencode-go/deepseek-v4.1-flash` |
+| Roles del perfil | los 13 | los mismos 13 |
+
+Los ids **no** son isomorfos: el flash de opencode-go se llama `deepseek-v4.1-flash`, no
+`deepseek-flash`. Por eso el mapa es explícito en `scripts/profiles.mjs`, no un `replace` del prefijo.
+
+Con `--deepseek-via none` el instalador **oculta y rechaza** los perfiles que requieren DeepSeek
+(`full-deepseek`, `hybrid-claude`, `hybrid-openai`, `full-deepseek-claude-openai`) y el menú solo
+ofrece los tres que no lo usan. La ruta elegida se guarda en `~/.pi-bootstrap/installed.json`, así que
+`verify`, `auth` y `profile` la respetan sin tener que repetir el flag.
+
 ## OpenAI (una vez, en el navegador)
 
 ```bash
@@ -69,5 +96,5 @@ Notas:
 |---|---|---|
 | `openai: sin credenciales` | `/login` no se completó | `pi` → `/login` → `pi-bootstrap verify` |
 | `claude: sin credenciales` | Claude Code no logueado | `claude` → `/login` |
-| `claude-bridge` no aparece | falta el paquete o el binario | `pi install npm:pi-claude-bridge@0.9.3` y `claude --version` |
+| `claude-bridge` no aparece | falta el paquete o el binario | `pi install npm:pi-claude-bridge@0.10.0` y `claude --version` |
 | modelo inexistente en el perfil | perfil de un proveedor que no tienes | `pi-bootstrap profile full-deepseek` |

@@ -1,8 +1,6 @@
 ---
 name: gentle-ai-worker
 description: Scoped package-owned implementation writer for bounded ODD work. Edits code, runs focused tests, and returns review-ready evidence without committing.
-model: opencode-go/deepseek-v4.1-flash
-thinking: high
 tools:
   - read
   - grep

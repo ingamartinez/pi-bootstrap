@@ -1,8 +1,6 @@
 ---
 name: review-resilience
 description: R4 Resilience reviewer — fallbacks, retry/backoff, graceful degradation, observability, load, rollback, and SLO risks.
-model: opencode-go/deepseek-v4.1-flash
-thinking: high
 tools:
   - "*": false
   - read

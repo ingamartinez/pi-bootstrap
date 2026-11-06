@@ -1,8 +1,6 @@
 ---
 name: jd-fix-agent
 description: Judgment Day surgical fix agent for confirmed findings. Can edit code and run focused tests.
-model: opencode-go/deepseek-v4.1-flash
-thinking: high
 tools:
   - read
   - grep

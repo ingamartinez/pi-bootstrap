@@ -111,18 +111,63 @@ Las skills que ve un dev de Pi son las **13 del paquete `gentle-pi`** (pinneado)
 
 ### Perfiles
 
-| Perfil | Proveedores | Independencia |
-|---|---|---|
-| `hybrid-claude` | deepseek + claude | cross-provider |
-| `hybrid-openai` | deepseek + openai | cross-provider |
-| `full-claude` | claude | same-family |
-| `full-openai` | openai | same-family |
-| `full-deepseek` | deepseek | same-family |
+Ocho perfiles × 13 roles. El nombre se lee **quién produce → quién verifica**: el primer
+proveedor escribe y revisa para sí, el segundo aporta la mirada independiente.
+
+| Perfil | Produce | Verifica | Independencia |
+|---|---|---|---|
+| `full-claude` | Claude | Claude | same-family |
+| `full-openai` | OpenAI | OpenAI | same-family |
+| `full-deepseek` | DeepSeek | DeepSeek | same-family |
+| `hybrid-claude` | DeepSeek | Claude | cross-provider |
+| `hybrid-openai` | DeepSeek | OpenAI | cross-provider |
+| `claude-produces-openai-verifies` | Claude | OpenAI | cross-provider |
+| `openai-produces-claude-verifies` | OpenAI | Claude | cross-provider |
+| `full-deepseek-claude-openai` | DeepSeek | Claude (y OpenAI en riesgo/jueces) | cross-provider |
 
 La matriz vive en `scripts/profiles.mjs` (única fuente de verdad, 13 roles). Los perfiles
 `same-family` verifican con la misma familia que producen: sirven para trabajo diario, no para gates
 críticos, y `verify` lo advierte. `apply-profile` deriva los tres archivos de runtime y detecta
 desincronización entre ellos.
+
+Si no pasas `--profile`, `install` imprime este menú y acepta número o id (Enter = `full-claude`):
+
+```
+  1) full-claude                 Todo Claude (misma familia) [misma familia]
+  5) claude-produces-openai-verifies  Claude produce · OpenAI verifica [familias distintas]
+Número o id [full-claude]:
+```
+
+El menú lee `label`, `requires` e `independence` del JSON del perfil con `sed`, no con `node`:
+cuando se pregunta el perfil todavía no hay node instalado.
+
+#### Eje DeepSeek: API directa, opencode-go o ninguno
+
+Antes del menú de perfiles, `install` pregunta por dónde quieres DeepSeek y filtra la lista según la
+respuesta (`--deepseek-via deepseek|opencode-go|none`, default `deepseek`):
+
+| Ruta | Credencial | Perfiles ofrecidos |
+|---|---|---|
+| `deepseek` | `DEEPSEEK_API_KEY` | los 8 |
+| `opencode-go` | `OPENCODE_API_KEY` | los 8, con los ids DeepSeek del catálogo de opencode-go |
+| `none` | — | solo los 4 sin DeepSeek |
+
+La matriz no se duplica: se enruta el perfil al aplicarlo (`profileForRoute`). Los ids no son
+isomorfos (`deepseek/deepseek-flash` ↔ `opencode-go/deepseek-v4.1-flash`), así que el mapa es
+explícito. La ruta queda registrada en `~/.pi-bootstrap/installed.json` y `verify`/`auth`/`profile`
+la leen de ahí.
+
+#### El perfil manda también en el default y en el frontmatter de los agentes
+
+`apply-profile` es el único escritor de:
+
+- `~/.pi/agent/settings.json` → `defaultProvider`, `defaultModel`, `defaultThinkingLevel`
+- `~/.pi/agent/agents/<rol>.md` → `model:` y `thinking:` del frontmatter
+
+Por eso los `.md` del repo son **plantillas sin esas líneas**: `apply-config` copia con
+`copy-missing` y nunca los reescribe, así que un `model:` fijo ahí quedaba mintiendo en cuanto
+cambiabas de perfil o de ruta. `apply-profile --check` cubre los dos, y con `--deepseek-via
+opencode-go` el default pasa a `opencode-go/deepseek-v4-pro`.
 
 ### Tier `shell` sin wizard
 
