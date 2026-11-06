@@ -11,9 +11,9 @@ escriba `pi` dentro de cualquier repo y empiece a trabajar.
 curl -fsSL https://github.com/ingamartinez/pi-bootstrap/raw/v0.2.0/bootstrap.sh | sh
 ```
 
-Pregunta lo que no puede adivinar: perfil de modelos, si quieres el tier `shell`, si conectas
-credenciales ahora o después, y **confirma antes de escribir nada**. El plan que imprime después
-refleja tus respuestas.
+Pregunta lo que no puede adivinar: la ruta de DeepSeek (o el perfil, si falta) y **confirma antes de
+escribir nada**. El tier `shell` y la conexión de credenciales ya no se preguntan: entran siempre, y
+el login de cada proveedor ocurre por debajo, sin abrir una TUI.
 
 Funciona porque `bootstrap.sh`, al detectar que viene por una tubería (stdin es el script), reabre
 `/dev/tty` como entrada del instalador. Si prefieres no depender de eso, las dos alternativas son
@@ -52,12 +52,29 @@ Release actual **v0.2.0**, CI verde en `main` y en cada tag.
 | Stack gentle-ai declarado explícitamente (preset, persona, componentes) | ✅ |
 | `upgrade` (plan, apply, rollback con downgrade real) | ✅ |
 | `reset` (config / tools / shell, con backup previo) | ✅ |
-| Login guiado (deepseek por key; openai y claude por TUI + polling) | ⚠️ escrito, **no ejecutado** todavía en una TTY real |
+| Login sin TUI (deepseek/opencode por key; openai con `scripts/pi-login.mjs`; claude con `claude auth login`) | ✅ en Docker con pty: menú de método, URL impresa, espera acotada y aborto limpio. Falta cerrar un OAuth con navegador real |
 | Prueba con un dev externo | ⏳ pendiente |
 
 Lo verificado se comprobó así: **Linux limpio** (`ubuntu:24.04`, usuario no-root, sin TTY, sin
 navegador, checkout montado read-only) en arm64 y amd64, **macOS** con `HOME` aislado (bash 3.2),
 y el **one-liner publicado** en contenedor limpio.
+
+El paso de auth se ejercita en Docker **con un pty de verdad** (`script(1)`, que ya trae la imagen),
+porque sin terminal ese camino ni se ejecuta. Se cubren los cuatro comportamientos: sin TTY avisa y
+no escribe nada; con pty el método `2` pregunta y persiste la key; con pty el método `1` imprime la
+URL del OAuth y termina al expirar `PI_LOGIN_TIMEOUT`; y el *device code* de `openai-codex`
+(`--prefer device_code`) imprime URL y código de 8 caracteres sin depender de localhost. Lo que el
+contenedor no puede hacer es **completar** el OAuth: eso necesita un navegador.
+
+## Después de instalar
+
+Si `~/.local/bin` (o tu `--prefix`) no estaba en tu `PATH`, el instalador te lo dice al final con el
+`export` exacto para esa sesión; además queda escrito en `~/.bashrc`, `~/.profile` y `~/.zprofile`
+(si tu shell es zsh), así que un terminal nuevo ya encuentra `pi`.
+
+Si ves `pi: command not found` justo después de un install verde, es esto — el PATH del proceso no
+vuelve al shell que lo lanzó, no una instalación fallida. `pi-bootstrap verify` pasa porque corre
+dentro del proceso que sí tenía el PATH correcto.
 
 ## Comandos
 
@@ -169,11 +186,13 @@ Por eso los `.md` del repo son **plantillas sin esas líneas**: `apply-config` c
 cambiabas de perfil o de ruta. `apply-profile --check` cubre los dos, y con `--deepseek-via
 opencode-go` el default pasa a `opencode-go/deepseek-v4-pro`.
 
-### Tier `shell` sin wizard
+## Tier `shell`: ya no es opcional
 
 `gentle-ai` **no** instala gentle-shell: instala el stack del agente (persona, engram, skills,
 routing). Gentle Shell es el workspace construido sobre Pi y su binario viaja dentro del paquete
-`gentle-pi`, que ya instalamos. Su instalador oficial es un wizard de navegador, pero el paquete
+`gentle-pi`, que ya instalamos. Por eso el tier `shell` entra **siempre** (`tiers:
+base,tools,shell`) y no se pregunta: es la gracia del script. Sólo un `--tiers` explícito lo puede
+dejar fuera. Su instalador oficial es un wizard de navegador, pero el paquete
 expone las mismas piezas por CLI:
 
 ```
@@ -194,18 +213,19 @@ Tres modos, sin ambigüedad:
 
 | Situación | Comportamiento |
 |---|---|
-| Terminal interactiva, sin `--yes` | **Pregunta**: perfil (si falta), tier `shell`, conectar credenciales ahora o después… y **confirma antes de tocar nada** |
+| Terminal interactiva, sin `--yes` | **Pregunta**: sólo la ruta de DeepSeek (y el perfil si falta)… y **confirma antes de tocar nada** |
 | Con `--yes` | No pregunta nada: usa los flags y los valores por defecto. Es el modo para CI y para el one-liner |
 | Sin terminal y sin `--yes` | **Falla** con instrucciones en vez de asumir un sí |
 
-Las preguntas del install son tres como máximo:
+El tier `shell` y la conexión de credenciales **no se preguntan**: son parte del producto.
+
+Las preguntas del install son dos como máximo:
 
 ```
 ¿Qué perfil de modelos quieres?
   1) full-claude    Todo Claude (vía Claude Code / claude-bridge)
   ...
-¿Instalar también el tier shell (gentle-shell, home aislado)? [s/N]
-¿Conectar credenciales ahora (abre la TUI de pi / Claude Code)? [S/n]
+¿Cómo quieres DeepSeek?  (sólo si algún proveedor del perfil lo usa)
 ¿Procedo con la instalación? [s/N]
 ```
 
@@ -260,6 +280,7 @@ pi-bootstrap reset --all --yes           # config + tools (+ --shell)
 
 ```bash
 ./tests/docker/run.sh                                # Linux limpio: instala, verifica, idempotencia, reset y recuperación
+MODE=interactive ./tests/docker/run.sh               # ambiente real: contenedor limpio + tú eligiendo
 MODE=published ./tests/docker/run.sh                 # el one-liner real contra el tag publicado
 PLATFORM=linux/amd64 ./tests/docker/run.sh           # la arquitectura que no es la de tu máquina (emulada)
 PROFILE=full-openai ./tests/docker/run.sh
@@ -267,6 +288,22 @@ node scripts/gen-profiles.mjs --check                # la matriz y los perfiles 
 node scripts/gen-pins.mjs --check                    # lib/pins.sh y manifest.json no divergen
 node scripts/check-urls.mjs                          # las 12 URLs pineadas existen (4 plataformas)
 ```
+
+`run.sh` (modo `checkout`) es un **test**, no un ambiente: el escenario fija `PROFILE`
+(default `full-deepseek`), responde por ti y usa `--yes`/`--skip-auth`. Para probar los prompts de
+verdad, `MODE=interactive` te deja un shell en el mismo contenedor limpio con el repo en `/src`:
+
+```
+/src/bootstrap.sh              # eliges ruta de DeepSeek y perfil; auth corre de verdad
+/src/bootstrap.sh --dry-run    # el plan, sin tocar nada
+```
+
+Ese modo publica `127.0.0.1:1455` **y** hace que el callback escuche en `0.0.0.0`: dentro de Docker la
+conexión llega desde el gateway de la VM, no desde loopback, y un socket atado a `127.0.0.1` la
+rechaza (el navegador mostraría `ERR_EMPTY_RESPONSE`). Con eso, un login de OpenAI **se completa**
+ahí: al autorizar, la pestaña dice "Authentication successful" y la terminal sigue sola. Claude
+también termina, pegando el código que muestra su página — ojo, ese input **no se ve mientras lo
+pegas** (es secreto), pero funciona.
 
 La CI corre en cada push a `main` y en cada tag: drift de generados + sintaxis POSIX/bash, escenario
 completo en contenedor Linux, smoke de macOS (bash 3.2) y el guard tag↔versión.
@@ -315,11 +352,12 @@ scripts/{set-api-key,trust-project}.mjs
 scripts/release.sh            fija versión, commitea, tagea y publica
 project/AGENTS.md             plantilla para `pi-bootstrap init`
 docs/AUTH.md                  el paso humano por proveedor
-tests/docker/                 Dockerfile, escenario, asserts, modo published
+tests/docker/                 Dockerfile, escenario, asserts, modo published e interactive
 ```
 
 ## Autenticación
 
 Ver [`docs/AUTH.md`](docs/AUTH.md). Resumen: `deepseek` se resuelve con una key (30 segundos, sin
-navegador); `openai` y `claude` requieren un login en la TUI y el bootstrap espera comprobando
-`pi auth check`. El bootstrap **nunca** copia credenciales de otra máquina.
+navegador); `openai` conduce el OAuth de pi desde `scripts/pi-login.mjs` y `claude` usa
+`claude auth login` — en los dos casos el script imprime la URL, espera el callback y sigue solo, sin
+TUI que cerrar. El bootstrap **nunca** copia credenciales de otra máquina.

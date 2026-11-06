@@ -290,7 +290,7 @@ async function main() {
     warn("manifest.json del repo restaurado (queda modificado en el working tree)");
     const profile = activeProfile();
     // EXACT: un rollback también baja versiones, no sólo los pins del manifest
-    run("install", ["--force", "--yes", ...(profile ? ["--profile", profile] : []), "--skip-auth"], {
+    run("install", ["--force", "--yes", ...(profile ? ["--profile", profile] : [])], {
       PI_BOOTSTRAP_EXACT: "1",
     });
     run("verify", profile ? ["--profile", profile] : []);
@@ -322,7 +322,10 @@ async function main() {
   const st = installedState();
   const profile = valueOf("--profile", st?.profile || activeProfile());
   const tiers = valueOf("--tiers", st?.tiers || "base,tools,shell");
-  run("install", ["--force", "--yes", "--profile", profile, "--tiers", tiers, "--skip-auth"]);
+  // Sin --skip-auth: auth_gate comprueba primero y sólo conecta lo que falte, así que un upgrade
+  // no vuelve a pedir nada. Saltarlo aquí dejaba al usuario con la sensación de que el instalador
+  // "decidía" no autenticar (y en CI sin TTY el paso avisa y sigue igual).
+  run("install", ["--force", "--yes", "--profile", profile, "--tiers", tiers]);
   run("verify", ["--profile", profile, "--tiers", tiers]);
   ok(`actualizado. Para volver atrás: pi-bootstrap upgrade --rollback --to ${dir.split("/").pop()}`);
 }

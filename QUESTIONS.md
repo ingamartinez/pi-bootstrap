@@ -44,7 +44,9 @@
 - ~~Borrar configuración~~ → **`pi-bootstrap reset --config|--tools|--shell|--all`** con backup previo
   y `--purge-auth` separado.
 - **`curl | sh`**: publicar el repo y el tag; hoy `bootstrap.sh` falla con instrucciones claras.
-- **Login en TTY real**: probar `auth` con openai y claude de verdad (en Docker no se puede).
+- **Login sin TUI**: el mecanismo cambió (openai por `scripts/pi-login.mjs`, claude por
+  `claude auth login`). Falta un login real de punta a punta en una TTY: hoy está verificado que el
+  flujo headless arranca, imprime la URL, escucha y aborta limpio; no que complete el OAuth.
 - **macOS**: correr el mismo `tests/` en un HOME aislado o usuario nuevo (el pipeline no se ha
   ejercitado en macOS todavía; sí en Linux).
 - **Telemetría**: decidir default para devs externos (pi, gentle-ai, engram).

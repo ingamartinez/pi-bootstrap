@@ -46,14 +46,16 @@ install_node() {
   if have node; then
     local cur; cur=$(tool_version node)
     if [ "${cur:-0.0.0}" = "$want" ]; then
-      ok "node $cur (pin $want) ya instalado"
+      ok "node $cur (pin $want) ya instalado: $(command -v node)"
       return 0
     fi
     if ver_ge "${cur:-0.0.0}" "$want" && [ "$EXACT" != "1" ]; then
-      ok "node $cur ≥ pin $want: se reutiliza"
+      # El pin es un mínimo, no una imposición: si el node del sistema ya sirve, no se instala otro.
+      ok "node $cur ≥ pin $want: se reutiliza $(command -v node) (no se instala nada)"
       return 0
     fi
-    log "  node $cur ≠ $want: se instala el pin en $PREFIX/node"
+    log "  node $cur < pin $want: tu node no se toca; se instala $want en $PREFIX/node"
+    log "  (ese pin queda primero en PATH sólo para las herramientas del bootstrap)"
   fi
 
   local sha_var="NODE_SHA_${OS}_${ARCH}"
@@ -308,6 +310,26 @@ claude_credentials() {
   grep -qE 'accessToken|refreshToken|claudeAiOauth' "$creds" 2>/dev/null
 }
 
+auth_interactive() {
+  # ¿hay alguien al otro lado para el paso de auth? `--yes` NO lo apaga: conectar credenciales
+  # dejó de ser opcional, pero en CI (sin /dev/tty) no se puede abrir un navegador.
+  [ "${PI_BOOTSTRAP_ASSUME_TTY:-0}" = "1" ] && return 0
+  tty_available
+}
+
+pi_login() {
+  # pi_login <provider> [prefer] [segundos]
+  # Conduce el flujo OAuth de pi desde la terminal: sin TUI y sin que el usuario tenga que salir
+  # de nada. El script imprime la URL, escucha el callback y termina cuando la credencial está.
+  # PI_LOGIN_TIMEOUT permite acortar la espera en tests (docker no tiene navegador).
+  local provider="$1" prefer="${2:-}" limit="${3:-${PI_LOGIN_TIMEOUT:-600}}"
+  if [ -n "$prefer" ]; then
+    node "$SRC/scripts/pi-login.mjs" "$provider" --prefer "$prefer" --timeout "$limit"
+  else
+    node "$SRC/scripts/pi-login.mjs" "$provider" --timeout "$limit"
+  fi
+}
+
 wait_for_auth() {
   # wait_for_auth <provider> <segundos>
   local provider="$1" limit="${2:-300}" waited=0
@@ -320,7 +342,7 @@ wait_for_auth() {
 }
 
 auth_gate() {
-  step "autenticación (paso humano, una sola vez)"
+  step "autenticación (siempre; login por debajo, sin TUI)"
   if [ "${SKIP_AUTH:-0}" = "1" ]; then
     warn "--skip-auth: se omite. Cuando quieras: pi-bootstrap auth"
     return 0
@@ -364,29 +386,66 @@ auth_gate() {
         ;;
       openai)
         if auth_ready openai; then ok "openai listo"; continue; fi
-        log "  Se abrirá pi. Dentro escribe: /login  y elige OpenAI."
-        if [ -t 0 ] && [ -t 1 ]; then
-          pi || true
-          stty sane 2>/dev/null || true
-          if wait_for_auth openai 60; then ok "openai listo"; else warn "openai no quedó autenticado"; fi
-        else
-          warn "sin TTY: corre 'pi' y luego '/login' (OpenAI)"
+        if [ -n "${OPENAI_API_KEY:-}" ]; then
+          node "$SRC/scripts/set-api-key.mjs" openai "$OPENAI_API_KEY"
+          ok "openai: key tomada de OPENAI_API_KEY"
+          continue
         fi
+        if ! auth_interactive; then
+          warn "sin terminal: define OPENAI_API_KEY y corre 'pi-bootstrap auth'"
+          continue
+        fi
+        # Ya no se abre la TUI: el mismo flujo OAuth de pi se conduce desde el script y el
+        # usuario sólo autoriza en el navegador (el callback local cierra el paso solo).
+        log "  Login sin TUI: se imprime la URL, autorizas en el navegador y el script sigue solo."
+        log "  (espera hasta 10 min; Ctrl-C para saltar)"
+        # El método se pregunta sólo cuando de verdad se está conversando (`--yes` va directo al
+        # OAuth, que es el default). Pegar la key sigue disponible en `pi-bootstrap auth`.
+        local method="1"
+        if interactive; then
+          printf '  1) Iniciar sesión con ChatGPT (navegador)\n  2) Pegar OPENAI_API_KEY\nMétodo [1]: ' >&2
+          prompt_read method || method="1"
+          [ -n "$method" ] || method="1"
+        fi
+        case "$method" in
+          2)
+            printf 'Pega tu OPENAI_API_KEY: ' >&2
+            local okey=""; prompt_read okey || okey=""
+            if [ -n "$okey" ]; then
+              node "$SRC/scripts/set-api-key.mjs" openai "$okey"
+              ok "openai listo"
+            else
+              warn "openai sin credenciales — 'pi-bootstrap auth' cuando la tengas"
+            fi
+            ;;
+          *)
+            pi_login openai browser || true
+            if auth_ready openai; then
+              ok "openai listo"
+            else
+              warn "openai no quedó autenticado"
+              log "  Si el puerto 1455 estaba ocupado o cerraste el navegador: 'pi-bootstrap auth'"
+            fi
+            ;;
+        esac
         ;;
       claude)
         if auth_ready claude; then ok "claude listo"; continue; fi
         have claude || die "falta el binario claude (instala con --profile ... y tier auth:claude)"
-        log "  Se abrirá Claude Code. Escribe /login y elige tu cuenta (plan Pro/Max)."
-        if [ -t 0 ] && [ -t 1 ]; then
-          claude || true
-          # La TUI deja el terminal en modo crudo: sin esto, las teclas salen como ^[[A al volver.
-          stty sane 2>/dev/null || true
-          if auth_ready claude; then ok "claude listo"; continue; fi
-          log "  esperando ~/.claude/.credentials.json (30s) — Ctrl-C para saltar"
-          if wait_for_auth claude 30; then ok "claude listo"; else warn "claude no quedó autenticado"; fi
-        else
-          warn "sin TTY: corre 'claude' y luego '/login'"
+        if ! auth_interactive; then
+          warn "sin terminal: corre 'claude auth login' en una máquina con navegador"
+          continue
         fi
+        # `claude auth login` abre el navegador y vuelve solo; antes se abría la TUI completa
+        # (`claude`) y había que escribir /login y salir a mano.
+        log "  Login sin TUI: 'claude auth login' abre el navegador y vuelve solo."
+        log "  Si te pide pegar un código, pégalo y pulsa Enter: mientras lo pegas NO se ve (es entrada secreta)."
+        if tty_available; then claude auth login < /dev/tty || true; else claude auth login || true; fi
+        # La UI de Ink deja el terminal en modo crudo: sin esto, las teclas salen como ^[[A al volver.
+        stty sane 2>/dev/null || true
+        if auth_ready claude; then ok "claude listo"; continue; fi
+        log "  esperando ~/.claude/.credentials.json (60s) — Ctrl-C para saltar"
+        if wait_for_auth claude 60; then ok "claude listo"; else warn "claude no quedó autenticado"; fi
         ;;
       *) warn "proveedor desconocido en el perfil: $provider" ;;
     esac

@@ -55,15 +55,36 @@ ensure_path() {
     *) PATH="$PREFIX/bin:$PATH"; export PATH ;;
   esac
   local marker="# >>> pi-bootstrap >>>"
+  PATH_RC_FILES=""
   for rc in "$HOME/.zprofile" "$HOME/.profile" "$HOME/.bashrc"; do
     [ "$rc" = "$HOME/.bashrc" ] && [ ! -f "$rc" ] && continue
-    if [ -f "$rc" ] && grep -qF "$marker" "$rc" 2>/dev/null; then continue; fi
+    if [ -f "$rc" ] && grep -qF "$marker" "$rc" 2>/dev/null; then
+      PATH_RC_FILES="$PATH_RC_FILES $rc"
+      continue
+    fi
     # ~/.zprofile sólo si el shell por defecto es zsh; si no, ya está ~/.profile
     if [ "$rc" = "$HOME/.zprofile" ] && [ "${SHELL##*/}" != "zsh" ]; then continue; fi
     { printf '\n%s\ncase ":$PATH:" in *":%s/bin:"*) ;; *) PATH="%s/bin:$PATH" ;; esac\nexport PATH\n' \
         "$marker" "$PREFIX" "$PREFIX"; } >> "$rc"
+    PATH_RC_FILES="$PATH_RC_FILES $rc"
     log "PATH añadido a $rc"
   done
+  export PATH_RC_FILES
+}
+
+# El PATH del proceso ya quedó bien, pero el shell que invocó el instalador no lo hereda: sin este
+# aviso, `pi` contesta "command not found" justo después de un install verde (verify pasa porque
+# corre dentro de este proceso).
+path_activation_hint() {
+  case ":${INITIAL_PATH:-}:" in
+    *":$PREFIX/bin:"*) return 0 ;;
+  esac
+  step "activar el PATH en esta sesión"
+  log "  $PREFIX/bin no estaba en tu PATH al empezar, así que este shell todavía no encuentra 'pi'."
+  [ -n "${PATH_RC_FILES:-}" ] && log "  Ya quedó escrito en:$PATH_RC_FILES — un terminal nuevo lo toma solo."
+  log "  Para esta sesión, ahora mismo:"
+  log "    export PATH=\"$PREFIX/bin:\$PATH\""
+  log "  Comprueba con:  pi --version"
 }
 
 fetch() {
