@@ -1,6 +1,6 @@
 {
   "schema": "pi-bootstrap.manifest/1",
-  "updated": "2026-10-29",
+  "updated": "2026-11-05",
   "installPrefix": "~/.local",
   "tiers": {
     "base": [
@@ -22,14 +22,14 @@
   "tools": {
     "node": {
       "kind": "tarball",
-      "version": "24.21.0",
+      "version": "24.22.2",
       "requires": [],
       "url": "https://nodejs.org/dist/v{version}/node-v{version}-{os}-{arch}.tar.gz",
       "sha256": {
-        "darwin-arm64": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
-        "darwin-x64": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
-        "linux-arm64": "724282c3b43aec998aa9527380465b45d229e021b58035f5f4f63095eabfe5d5",
-        "linux-x64": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff"
+        "darwin-arm64": "aa9549349e47dffaa42dcf95d6e06ade8c4bdafc980979883b88767670df385a",
+        "darwin-x64": "d5e336d588c45be0c37dbd52cc29895593009ca4997a77a1fd02815131ed0e52",
+        "linux-arm64": "95c264150aceb7f3437a29fd6984924f5f8d1511ea3cbd6c508b83f6c555dae2",
+        "linux-x64": "361718c444e49af2ca5a110c83ba6a8901143f23ab285ebbef0341f391f482a9"
       },
       "dest": "~/.local/node",
       "stripComponents": 1,
@@ -46,7 +46,7 @@
     "pi": {
       "kind": "npm-global",
       "package": "@earendil-works/pi-coding-agent",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "requires": [
         "node"
       ],
@@ -80,14 +80,14 @@
     },
     "engram": {
       "kind": "tarball",
-      "version": "3.6.0",
+      "version": "3.6.2",
       "requires": [],
       "url": "https://github.com/Gentleman-Programming/engram/releases/download/v{version}/engram_{version}_{os}_{arch}.tar.gz",
       "sha256": {
-        "darwin-arm64": "b1e565ad2a2f01beca936030d65ab79075808ecc81e1e16447040e32fa2c0753",
-        "darwin-x64": "41d74d7d61bd8a8929da85a3ed75dbcb16c18f30efff4675ad2f832c8f89898e",
-        "linux-arm64": "00a2d7645aa428e56c32c18b8de8bfa90d4c6e0f68c4d47bc82e3d6e3e77879d",
-        "linux-x64": "945fb471188826c251160947f8dda9fe148ba0dd095fa3453174fe7ab5c6479e"
+        "darwin-arm64": "3d351cc01f17d90c81466483b4d97ddda7a59d9be29a0a2c3aabcdc6861f36e7",
+        "darwin-x64": "bf14238b78f7fe57c1347842e388723d409ddf85d3a4314450835957862cf3db",
+        "linux-arm64": "408491460c55ed6150e6582f6c32e1e10fe572e2cf68228415b9f8be719703e4",
+        "linux-x64": "3527b7e7e8692fd4aaaf576d331cded19155523cf8b02c2de38744cccb229e89"
       },
       "artifact": "engram",
       "dest": "~/.local/bin",
@@ -102,7 +102,7 @@
     "codegraph": {
       "kind": "npm-global",
       "package": "@colbymchenry/codegraph",
-      "version": "1.6.0",
+      "version": "1.6.2",
       "requires": [
         "node"
       ],
@@ -116,7 +116,7 @@
     "claude-code": {
       "kind": "npm-global",
       "package": "@anthropic-ai/claude-code",
-      "version": "2.1.312",
+      "version": "2.1.318",
       "requires": [
         "node"
       ],
@@ -131,7 +131,7 @@
     "gentle-shell": {
       "kind": "pi-package-bin",
       "package": "gentle-pi",
-      "version": "4.5.1",
+      "version": "4.6.0",
       "requires": [
         "node",
         "pi",
@@ -151,17 +151,17 @@
   },
   "pi": {
     "packages": [
-      "npm:gentle-pi@4.5.1",
-      "npm:gentle-engram@0.4.2",
-      "npm:pi-claude-bridge@0.9.3",
-      "npm:pi-web-access@0.46.0",
-      "npm:@aliou/pi-processes@0.13.3",
-      "npm:pi-btw@0.8.0",
+      "npm:gentle-pi@4.6.0",
+      "npm:gentle-engram@0.6.0",
+      "npm:pi-claude-bridge@0.10.0",
+      "npm:pi-web-access@0.47.0",
+      "npm:@aliou/pi-processes@0.13.5",
+      "npm:pi-btw@0.8.1",
       "npm:pi-image-tools@1.4.0",
       "git:https://github.com/hasit/pi-community-themes@a6d7731fd46db4721654bf45161fb2cd1e8cbc1e"
     ],
     "optionalPackages": [
-      "npm:pi-browser-harness@0.13.0"
+      "npm:pi-browser-harness@0.14.0"
     ]
   },
   "agents": {
