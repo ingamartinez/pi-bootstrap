@@ -47,7 +47,7 @@ Release actual **v0.3.0**, CI verde en `main` y en cada tag.
 |---|---|
 | Binarios pineados (node, pi, gentle-ai, engram, codegraph, claude-code) con sha256 por os/arch | ✅ |
 | Config Pi (settings, mcp, 10 agentes, keybindings) con merge conservador | ✅ |
-| Matriz de 5 perfiles × 13 roles → `subagents.json` + `profiles.json` + `web-search.json` | ✅ |
+| Matriz de 8 perfiles × 13 roles → `subagents.json` + `profiles.json` + `web-search.json` | ✅ |
 | Tier `shell` (gentle-shell sin wizard) | ✅ |
 | Stack gentle-ai declarado explícitamente (preset, persona, componentes) | ✅ |
 | `upgrade` (plan, apply, rollback con downgrade real) | ✅ |
@@ -60,10 +60,11 @@ navegador, checkout montado read-only) en arm64 y amd64, **macOS** con `HOME` ai
 y el **one-liner publicado** en contenedor limpio.
 
 El paso de auth se ejercita en Docker **con un pty de verdad** (`script(1)`, que ya trae la imagen),
-porque sin terminal ese camino ni se ejecuta. Se cubren los cuatro comportamientos: sin TTY avisa y
-no escribe nada; con pty el método `2` pregunta y persiste la key; con pty el método `1` imprime la
-URL del OAuth y termina al expirar `PI_LOGIN_TIMEOUT`; y el *device code* de `openai-codex`
-(`--prefer device_code`) imprime URL y código de 8 caracteres sin depender de localhost. Lo que el
+porque sin terminal ese camino ni se ejecuta. Se cubren: sin TTY avisa y no escribe nada; el método
+`2` pregunta y persiste la key; el método `1` imprime la URL del OAuth y termina al expirar
+`PI_LOGIN_TIMEOUT`; pulsar Enter sin URL no cancela el login; el *device code* de `openai-codex`
+(`--prefer device_code`) imprime URL y código de 8 caracteres sin depender de localhost; y
+`set-api-key` escribe el esquema que pi acepta sin invalidar el OAuth de otro proveedor. Lo que el
 contenedor no puede hacer es **completar** el OAuth: eso necesita un navegador.
 
 ## Después de instalar
